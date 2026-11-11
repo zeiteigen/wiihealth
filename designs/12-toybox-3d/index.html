@@ -1,0 +1,1294 @@
+<title>Toybox Gym</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Keep inactive screens and safety dialogs hidden until the demo opens them. */
+[hidden]{display:none!important}
+/* Layout: a full-bleed 3D toy diorama is the stage; one glossy "toy box lid" panel docks on the left (stacks below the stage on phones). Single sunny light theme by choice. */
+:root{
+  --sky-top:#3d9fea; --sky:#bfe5ff; --sky-pale:#eaf6ff;
+  --ink:#14304b; --ink-2:#435d77; --line:#cfe1f0; --chip:#eef6fd;
+  --blue:#1f7ae0; --blue-deep:#0f56a8; --sun:#ffc531; --sun-deep:#c98f00;
+  --grass:#52b860; --coral:#ef4f43; --plastic:#ffffff;
+  --good:#137a3f; --good-bg:#daf5e4; --warn:#8a5200; --warn-bg:#fff0c7; --bad:#b8261c; --bad-bg:#ffe0db;
+  --panel:rgba(255,255,255,.94);
+  --ax:#e0473b; --ay:#13945a; --az:#1f6fd6;
+  --f-display:"Baloo 2","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",Verdana,system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--sky);color:var(--ink);font:18px/1.45 var(--f-body);overflow:hidden}
+*{box-sizing:border-box}
+button{font-family:inherit;color:inherit}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.05;text-wrap:balance}
+p{margin:0}
+.app{height:100%;display:flex;flex-direction:column}
+
+/* top bar */
+.bar{display:flex;align-items:center;gap:14px;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:linear-gradient(180deg,#ffffff,#edf6fe);border-bottom:2px solid var(--line);position:relative;z-index:6}
+.logo{display:flex;align-items:center;gap:10px;flex:none}
+.logo-mark{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#8fd0ff,#1f7ae0 70%);box-shadow:inset 0 -4px 0 rgba(0,0,0,.12),0 3px 0 var(--blue-deep);display:grid;place-items:center}
+.logo b{font:800 28px/1 var(--f-display);color:var(--blue-deep);letter-spacing:-.01em}
+.logo b span{color:var(--coral)}
+.steps{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none;padding-block:4px}
+.steps::-webkit-scrollbar{display:none}
+.step{flex:none;border:0;background:transparent;font:700 17px/1 var(--f-display);color:var(--ink-2);padding:10px 14px;border-radius:999px;cursor:pointer;min-height:44px}
+.step:hover{background:var(--chip)}
+.step[aria-current="step"]{background:var(--blue);color:#fff;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),0 3px 0 var(--blue-deep)}
+.step:focus-visible,.icon-btn:focus-visible{outline:4px solid var(--sun);outline-offset:2px}
+.icon-btn{flex:none;display:flex;align-items:center;gap:8px;border:2px solid var(--line);background:#fff;border-radius:999px;padding:0 16px;min-height:48px;font:700 17px/1 var(--f-display);color:var(--blue-deep);cursor:pointer}
+.icon-btn[aria-pressed="true"]{background:var(--good-bg);border-color:#9fdcb7;color:var(--good)}
+
+/* stage */
+.stage{position:relative;flex:1;min-height:0;overflow:hidden;background:linear-gradient(180deg,var(--sky-top),var(--sky) 60%,var(--sky-pale))}
+#gl{position:absolute;inset:0}
+#gl canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+#gl canvas:active{cursor:grabbing}
+.tag3d{position:absolute;left:0;top:0;pointer-events:none;font:800 22px/1 var(--f-display);color:var(--ink);background:#fff;border-radius:999px;padding:6px 12px;box-shadow:0 3px 0 rgba(20,48,75,.18);white-space:nowrap;z-index:2;font-variant-numeric:tabular-nums}
+.tag3d small{font:700 13px/1 var(--f-body);color:var(--ink-2);margin-left:4px}
+.tag3d.warn{background:var(--warn-bg);color:var(--warn)}
+.tag3d.bad{background:var(--bad);color:#fff}
+.tag3d.bad small{color:#fff}
+.drag-hint{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:12px;font:600 14px/1.2 var(--f-body);color:var(--ink);background:rgba(255,255,255,.75);padding:6px 12px;border-radius:999px;z-index:2;pointer-events:none}
+
+/* dock (the toy box lid) */
+.dock{position:absolute;z-index:3;top:16px;bottom:16px;left:max(16px,env(safe-area-inset-left,0px));width:min(470px,46%);overflow-y:auto;background:var(--panel);border-radius:30px;box-shadow:0 2px 0 #fff inset,0 10px 0 rgba(15,86,168,.14),0 24px 48px rgba(15,60,110,.22);border:3px solid #fff;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.screen{padding:24px 24px 28px;display:flex;flex-direction:column;gap:16px}
+.eyebrow{font:700 14px/1 var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--blue)}
+.screen h2{font-size:36px;font-weight:800;color:var(--ink)}
+.lede{color:var(--ink-2);max-width:60ch}
+.note{font-size:16px;color:var(--ink-2)}
+.btnrow{display:flex;flex-wrap:wrap;gap:12px}
+
+/* bubble buttons */
+.btn{position:relative;overflow:hidden;font:800 21px/1 var(--f-display);min-height:58px;padding:0 26px;border-radius:999px;border:0;cursor:pointer;color:#fff;background:linear-gradient(180deg,#5cb6ff 0%,#1f7ae0 62%,#1a6dcc 100%);box-shadow:inset 0 2px 0 rgba(255,255,255,.55),0 5px 0 var(--blue-deep),0 10px 18px rgba(15,86,168,.25);transition:transform .08s,box-shadow .08s}
+.btn::before{content:"";position:absolute;left:12%;right:12%;top:4px;height:42%;border-radius:999px;background:linear-gradient(rgba(255,255,255,.7),rgba(255,255,255,0));pointer-events:none}
+.btn:active{transform:translateY(4px);box-shadow:inset 0 2px 0 rgba(255,255,255,.55),0 1px 0 var(--blue-deep),0 4px 8px rgba(15,86,168,.25)}
+.btn:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
+.btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+.btn.white{color:var(--blue-deep);background:linear-gradient(180deg,#ffffff,#e6f1fb);box-shadow:inset 0 2px 0 #fff,0 5px 0 #b3cfe8,0 10px 18px rgba(15,86,168,.12)}
+.btn.sun{color:#3d2a00;background:linear-gradient(180deg,#ffe489,#ffc531 62%,#f4b300);box-shadow:inset 0 2px 0 rgba(255,255,255,.6),0 5px 0 var(--sun-deep),0 10px 18px rgba(201,143,0,.25)}
+.btn.red{background:linear-gradient(180deg,#ff8a7f,#ef4f43 62%,#d63c31);box-shadow:inset 0 2px 0 rgba(255,255,255,.5),0 5px 0 #a8271e,0 10px 18px rgba(168,39,30,.25)}
+.btn.green{background:linear-gradient(180deg,#63d98e,#22a95a 62%,#1a9650);box-shadow:inset 0 2px 0 rgba(255,255,255,.5),0 5px 0 #0f6e37,0 10px 18px rgba(15,110,55,.25)}
+.btn.small{min-height:48px;font-size:18px;padding:0 18px}
+.btn.wide{width:100%}
+
+/* profile + workout cards */
+.cards{display:grid;gap:12px}
+.pcard,.wcard{display:flex;align-items:center;gap:14px;text-align:left;width:100%;background:#fff;border:3px solid var(--line);border-radius:22px;padding:12px 14px;cursor:pointer;box-shadow:0 4px 0 #dbe8f3;min-height:76px}
+.pcard:hover,.wcard:hover{border-color:#9ccaf2}
+.pcard[aria-pressed="true"],.wcard[aria-pressed="true"]{border-color:var(--blue);background:linear-gradient(180deg,#fff,#eef6ff);box-shadow:0 4px 0 var(--blue-deep)}
+.pcard:focus-visible,.wcard:focus-visible{outline:4px solid var(--sun);outline-offset:2px}
+.pcard svg,.wcard svg{flex:none}
+.pmeta{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pmeta strong{font:800 22px/1.1 var(--f-display)}
+.pmeta span{font-size:16px;color:var(--ink-2)}
+.dosebox{background:var(--chip);border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;border:2px dashed #b8d6ef}
+.dosebox strong{font:800 20px/1.1 var(--f-display)}
+.dosebox .who{font-size:15px;color:var(--ink-2)}
+
+/* session HUD */
+.ses-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.ses-head h2{font-size:30px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;font:700 15px/1 var(--f-body);background:var(--chip);color:var(--ink);border-radius:999px;padding:7px 11px}
+.chip.band{background:#dff6ff;color:#075a86}
+.chip.band i{width:12px;height:12px;border-radius:50%;background:#28c3ff;box-shadow:0 0 0 3px rgba(40,195,255,.3)}
+.vitals{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{background:#fff;border-radius:22px;padding:12px 14px 14px;border:3px solid var(--line);display:flex;flex-direction:column;gap:4px;min-width:0;position:relative}
+.tile .lbl{font:700 15px/1 var(--f-body);color:var(--ink-2);letter-spacing:.04em;text-transform:uppercase}
+.tile .big{font:800 58px/0.95 var(--f-display);font-variant-numeric:tabular-nums;color:var(--ink)}
+.tile .big small{font-size:20px;font-weight:700;color:var(--ink-2);margin-left:3px}
+.tile .sub{font-size:15px;color:var(--ink-2)}
+.pill{align-self:flex-start;font:700 15px/1 var(--f-body);border-radius:999px;padding:6px 10px;background:var(--chip);color:var(--ink)}
+.is-good .pill{background:var(--good-bg);color:var(--good)}
+.is-warn{border-color:#f2cf73}
+.is-warn .pill{background:var(--warn-bg);color:var(--warn)}
+.is-bad{border-color:var(--bad);background:var(--bad-bg)}
+.is-bad .pill{background:var(--bad);color:#fff}
+.dose{background:#fff;border:3px solid var(--line);border-radius:22px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.dose-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.dose-top b{font:800 30px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.dose-top span{font-size:16px;color:var(--ink-2);text-align:right}
+.track{position:relative;height:26px;border-radius:999px;background:#e7f0f8;box-shadow:inset 0 3px 0 rgba(20,48,75,.08);overflow:hidden}
+.fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:999px;background:linear-gradient(180deg,#7fe3a4,#22a95a);box-shadow:inset 0 3px 0 rgba(255,255,255,.5);transition:width .3s}
+.fill.over{background:linear-gradient(180deg,#ffd36b,#f0a500)}
+.tick{position:absolute;top:4px;bottom:4px;width:3px;border-radius:2px;background:rgba(20,48,75,.18)}
+.motion{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mbox{background:#fff;border:3px solid var(--line);border-radius:22px;padding:10px 14px;min-width:0}
+.mbox .lbl{font:700 14px/1 var(--f-body);color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em}
+.mbox .val{font:800 34px/1.05 var(--f-display);font-variant-numeric:tabular-nums}
+.mbox .val small{font-size:16px;color:var(--ink-2);font-weight:700;margin-left:3px}
+.mbox .sub{font-size:15px;color:var(--ink-2)}
+.coach{display:flex;gap:12px;align-items:center;border-radius:20px;padding:12px 14px;background:var(--good-bg);color:var(--good);font-weight:700}
+.coach.warn{background:var(--warn-bg);color:var(--warn)}
+.coach.bad{background:var(--bad);color:#fff}
+.coach.info{background:var(--chip);color:var(--ink)}
+.coach .face{flex:none;width:38px;height:38px;border-radius:50%;background:#fff;display:grid;place-items:center;font:800 20px/1 var(--f-display);color:var(--blue)}
+.sensor{background:#0f2338;border-radius:18px;padding:10px 12px 8px;color:#cfe4f7}
+.sensor-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font:500 13px/1.2 var(--f-mono);flex-wrap:wrap}
+.legend{display:flex;gap:10px}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend i{width:10px;height:3px;border-radius:2px;display:inline-block}
+.sensor canvas{display:block;width:100%;height:74px;margin-top:6px}
+.sensor .raw{font:500 13px/1.2 var(--f-mono);color:#8fb3d6;font-variant-numeric:tabular-nums}
+.points{display:flex;align-items:center;gap:8px;font:800 22px/1 var(--f-display);color:var(--blue-deep)}
+.points b{font-variant-numeric:tabular-nums}
+
+/* ring toss */
+.toss-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.toss-stats div{background:#fff;border:3px solid var(--line);border-radius:18px;padding:8px 10px;text-align:center}
+.toss-stats b{display:block;font:800 34px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.toss-stats span{font-size:14px;color:var(--ink-2)}
+.meter{position:relative;height:70px;border-radius:20px;background:#eaf2f9;border:3px solid var(--line);overflow:hidden}
+.zone{position:absolute;top:0;bottom:0;display:grid;place-items:end center;padding-bottom:4px;font:800 16px/1 var(--f-display)}
+.zone.z1{background:rgba(255,197,49,.45);color:#7a5600}
+.zone.z2{background:rgba(31,122,224,.25);color:var(--blue-deep)}
+.zone.z3{background:rgba(239,79,67,.25);color:var(--bad)}
+.needle{position:absolute;top:0;bottom:0;width:6px;margin-left:-3px;background:var(--ink);border-radius:3px;left:0}
+.meter-scale{display:flex;justify-content:space-between;font:500 13px/1 var(--f-mono);color:var(--ink-2);margin-top:4px}
+.liftread{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.liftread b{font:800 40px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.holdbtn{min-height:92px;font-size:28px;user-select:none;-webkit-user-select:none;touch-action:none;-webkit-touch-callout:none}
+.holdbtn.on{transform:translateY(4px)}
+.rings{display:flex;flex-wrap:wrap;gap:6px}
+.rings i{width:26px;height:26px;border-radius:50%;border:6px solid var(--c,#ff5d73);opacity:1}
+.rings i.used{opacity:.18}
+.result{background:linear-gradient(180deg,#fffbe8,#fff3c4);border:3px solid #f2d27a;border-radius:22px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.result h3{font-size:28px}
+.mini-vitals{display:flex;gap:10px;flex-wrap:wrap}
+
+/* summary */
+.sum-top{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.ring-svg{flex:none}
+.stars{display:flex;gap:4px}
+.grid3{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat{background:#fff;border:3px solid var(--line);border-radius:18px;padding:10px 12px;min-width:0}
+.stat .lbl{font:700 14px/1.1 var(--f-body);color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em}
+.stat b{display:block;font:800 30px/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.stat .sub{font-size:15px;color:var(--ink-2)}
+.stickers{display:flex;flex-wrap:wrap;gap:10px;list-style:none;margin:0;padding:0}
+.sticker{display:flex;align-items:center;gap:8px;background:#fff;border:3px solid var(--line);border-radius:999px;padding:6px 14px 6px 6px;font:700 16px/1.1 var(--f-body)}
+.sticker .sb{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
+.privacy{font-size:15px;color:var(--ink-2);background:var(--chip);border-radius:16px;padding:10px 12px}
+
+/* podium list */
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{border:2px solid var(--line);background:#fff;border-radius:999px;font:700 17px/1 var(--f-display);padding:0 16px;min-height:46px;cursor:pointer;color:var(--ink-2)}
+.tab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.tab:focus-visible{outline:4px solid var(--sun);outline-offset:2px}
+.board{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:40px 44px 1fr auto;align-items:center;gap:10px;background:#fff;border:3px solid var(--line);border-radius:18px;padding:8px 10px}
+.row.me{border-color:var(--blue);background:#eef6ff}
+.rank{font:800 26px/1 var(--f-display);text-align:center;color:var(--ink-2)}
+.row:nth-child(1) .rank{color:#b58300}
+.rname{min-width:0}
+.rname strong{display:block;font:800 20px/1.1 var(--f-display)}
+.rname span{font-size:15px;color:var(--ink-2)}
+.cheer{border:2px solid #ffc2cb;background:#fff3f5;color:#b8263f;border-radius:999px;min-height:44px;padding:0 12px;font:700 16px/1 var(--f-display);cursor:pointer}
+.cheer:focus-visible{outline:4px solid var(--sun);outline-offset:2px}
+.goal{background:#fff;border:3px solid var(--line);border-radius:18px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+
+/* alert */
+.alert-wrap{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(20,48,75,.35);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px}
+.alert{width:min(560px,100%);background:#fff;border-radius:30px;padding:24px;display:flex;flex-direction:column;gap:14px;border:5px solid var(--bad);box-shadow:0 12px 0 rgba(168,39,30,.25),0 30px 60px rgba(0,0,0,.25)}
+.alert.amber{border-color:var(--sun)}
+.alert h2{font-size:36px;color:var(--bad)}
+.alert.amber h2{color:var(--warn)}
+.alert p{font-size:20px}
+.alert-live{display:flex;align-items:center;gap:10px;font:800 26px/1 var(--f-display);background:var(--bad-bg);color:var(--bad);border-radius:16px;padding:12px 14px;font-variant-numeric:tabular-nums}
+.alert-live.ok{background:var(--good-bg);color:var(--good)}
+.alert-live.amber{background:var(--warn-bg);color:var(--warn)}
+.alert-ico{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:var(--bad-bg)}
+
+/* demo controls */
+.demo-btn{position:fixed;z-index:15;right:max(16px,calc(env(safe-area-inset-right,0px) + 16px));bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.demo{position:fixed;z-index:16;right:max(16px,calc(env(safe-area-inset-right,0px) + 16px));bottom:calc(92px + env(safe-area-inset-bottom,0px));width:min(380px,calc(100vw - 32px));max-height:calc(100% - 120px);overflow-y:auto;background:#fff;border-radius:26px;border:3px solid var(--sun);box-shadow:0 8px 0 rgba(201,143,0,.25),0 20px 40px rgba(0,0,0,.2);padding:16px 16px 18px;display:flex;flex-direction:column;gap:12px}
+.demo h3{font-size:24px}
+.dgroup{display:flex;flex-direction:column;gap:6px}
+.dgroup>span{font:700 13px/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.dgroup div{display:flex;flex-wrap:wrap;gap:6px}
+.dbtn{border:2px solid var(--line);background:var(--chip);border-radius:999px;min-height:42px;padding:0 12px;font:700 15px/1 var(--f-body);cursor:pointer;color:var(--ink)}
+.dbtn:hover{border-color:#9ccaf2}
+.dbtn[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.dbtn.alarm{background:var(--bad-bg);border-color:#f4b3ab;color:var(--bad)}
+.dbtn:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.demo .hint{font-size:14px;color:var(--ink-2)}
+
+.toast{position:fixed;z-index:25;left:50%;top:calc(76px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--ink);color:#fff;font:700 18px/1.2 var(--f-body);padding:12px 18px;border-radius:999px;box-shadow:0 8px 20px rgba(0,0,0,.2);max-width:calc(100vw - 32px);text-align:center;pointer-events:none;transition:opacity .25s;opacity:0}
+.toast.show{opacity:1}
+
+/* 2D fallback */
+.fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.fb-wrap{margin-left:auto;width:min(48%,560px);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.fb-msg{background:#fff;border-radius:18px;padding:10px 14px;font-size:16px;max-width:40ch;box-shadow:0 4px 0 rgba(20,48,75,.12)}
+.fb-heart{animation:beat var(--beat,0.8s) infinite;transform-origin:50% 60%}
+@keyframes beat{0%,100%{transform:scale(1)}12%{transform:scale(1.14)}30%{transform:scale(1)}}
+.fb-scene{font:800 22px/1.2 var(--f-display)}
+
+@media (max-width:760px){
+  body{overflow:auto}
+  .app{height:auto;min-height:100%}
+  .bar{flex-wrap:wrap}
+  .steps{order:3;flex-basis:100%}
+  .stage{flex:none;overflow:visible}
+  #gl{position:relative;height:46vh;min-height:300px}
+  .fallback{position:relative;height:46vh;min-height:300px}
+  .fb-wrap{margin:0 auto;width:100%}
+  .dock{position:static;width:auto;margin:12px max(16px,env(safe-area-inset-left,0px)) 110px max(16px,env(safe-area-inset-right,0px));overflow:visible}
+  .screen{padding:18px 16px 22px}
+  .screen h2{font-size:30px}
+  .tile .big{font-size:48px}
+  .drag-hint{display:none}
+  .logo b{font-size:24px}
+}
+@media (max-width:420px){
+  .motion,.vitals{grid-template-columns:1fr 1fr;gap:8px}
+  .tile .big{font-size:42px}
+  .mbox .val{font-size:28px}
+}
+@media (prefers-reduced-motion:reduce){
+  .fb-heart{animation:none}
+  .btn,.fill{transition:none}
+}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="logo">
+      <span class="logo-mark" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 28 28"><rect x="3" y="9" width="22" height="10" rx="5" fill="#fff"/><rect x="10" y="7" width="8" height="14" rx="3" fill="#0f2338"/><rect x="12" y="10" width="4" height="8" rx="1.5" fill="#6fe3ff"/></svg>
+      </span>
+      <b>Toybox <span>Gym</span></b>
+    </div>
+    <nav class="steps" id="steps" aria-label="Steps">
+      <button class="step" data-go="players" aria-current="step">1 · Player</button>
+      <button class="step" data-go="workout">2 · Workout</button>
+      <button class="step" data-go="session">3 · Exercise</button>
+      <button class="step" data-go="toss">4 · Ring Toss</button>
+      <button class="step" data-go="summary">5 · Summary</button>
+      <button class="step" data-go="podium">6 · Podium</button>
+    </nav>
+    <button class="icon-btn" id="soundBtn" aria-pressed="false">
+      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7h3l5-4v14l-5-4H3z" fill="currentColor"/><path id="soundWave" d="M14 6.5c1.2 1 1.8 2.2 1.8 3.5s-.6 2.5-1.8 3.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" opacity=".3"/></svg>
+      <span id="soundLbl">Sound off</span>
+    </button>
+  </header>
+
+  <main class="stage" id="stage">
+    <div id="gl" aria-label="3D toy gym diorama" role="img"></div>
+    <div class="fallback" id="fallback" hidden>
+      <div class="fb-wrap">
+        <p class="fb-msg">This device can't show the 3D toy world, so you're seeing the simple view. Every feature still works.</p>
+        <svg width="260" height="220" viewBox="0 0 260 220" aria-hidden="true">
+          <ellipse cx="130" cy="206" rx="70" ry="10" fill="#7fb6e0" opacity=".35"/>
+          <g class="fb-heart" id="fbHeart"><path d="M200 70c-12-14-34-6-34 12 0 18 34 36 34 36s34-18 34-36c0-18-22-26-34-12z" fill="#ef4f43"/><ellipse cx="186" cy="74" rx="6" ry="4" fill="#fff" opacity=".6"/></g>
+          <circle id="fbBubble" cx="60" cy="86" r="24" fill="#bfeaff" stroke="#1f7ae0" stroke-width="3" opacity=".9"/>
+          <rect x="98" y="100" width="64" height="86" rx="32" id="fbBody" fill="#ff7a59"/>
+          <circle cx="130" cy="72" r="38" fill="#f5c9a6"/>
+          <circle cx="117" cy="70" r="5" fill="#1a2230"/><circle cx="143" cy="70" r="5" fill="#1a2230"/>
+          <path d="M118 86q12 10 24 0" stroke="#1a2230" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <rect id="fbBand" x="140" y="170" width="22" height="10" rx="5" fill="#28c3ff"/>
+        </svg>
+        <p class="fb-scene" id="fbScene">Pick a player to begin</p>
+      </div>
+    </div>
+    <div class="tag3d" id="lblHeart" hidden>--<small>bpm</small></div>
+    <div class="tag3d" id="lblO2" hidden>--<small>% O₂</small></div>
+    <div class="drag-hint" id="dragHint">Drag to turn the toy box</div>
+
+    <div class="dock" id="dock">
+      <!-- 1 players -->
+      <section class="screen" id="scr-players" aria-labelledby="h-players">
+        <p class="eyebrow">Step 1 of 6</p>
+        <h2 id="h-players">Who's exercising today?</h2>
+        <p class="lede">Tap your name. Your toy steps forward and your instructor's plan for today loads.</p>
+        <div class="cards" id="plist"></div>
+        <p class="note">Sample participants for the demo. Real names and health details never leave the clinic.</p>
+        <button class="btn wide" id="toWorkout">That's me</button>
+      </section>
+
+      <!-- 2 workout -->
+      <section class="screen" id="scr-workout" hidden aria-labelledby="h-workout">
+        <p class="eyebrow">Step 2 of 6</p>
+        <h2 id="h-workout">Pick today's workout</h2>
+        <p class="lede">Each workout needs the band in a different spot. Watch your toy: the glowing band shows where it goes.</p>
+        <div class="cards" id="wlist"></div>
+        <div class="dosebox" id="doseBox"></div>
+        <button class="btn wide green" id="startBtn">Start</button>
+      </section>
+
+      <!-- 3 session -->
+      <section class="screen" id="scr-session" hidden aria-labelledby="h-session">
+        <div class="ses-head">
+          <div>
+            <p class="eyebrow" id="sesEyebrow">Live session</p>
+            <h2 id="h-session">Walk</h2>
+          </div>
+          <div class="points" aria-label="Points"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2l3.3 6.8 7.4 1-5.4 5.2 1.3 7.4L13 18.9l-6.6 3.5 1.3-7.4L2.3 9.8l7.4-1z" fill="#ffc531" stroke="#c98f00" stroke-width="1.5"/></svg><b id="pts">0</b></div>
+        </div>
+        <div class="chips">
+          <span class="chip band"><i></i><span id="bandChip">Band on right ankle</span></span>
+          <span class="chip" id="clockChip">0:00 of 12:00</span>
+          <span class="chip" id="speedChip">Demo time ×4</span>
+        </div>
+        <div class="vitals">
+          <div class="tile" id="hrTile">
+            <span class="lbl">Heart</span>
+            <span class="big"><span id="hrVal">--</span><small>bpm</small></span>
+            <span class="pill" id="hrPill">Warming up</span>
+            <span class="sub" id="hrZone">Your zone 96–118</span>
+          </div>
+          <div class="tile" id="o2Tile">
+            <span class="lbl">Oxygen</span>
+            <span class="big"><span id="o2Val">--</span><small>%</small></span>
+            <span class="pill" id="o2Pill">Good</span>
+            <span class="sub">Rest if below 92%</span>
+          </div>
+        </div>
+        <div class="dose">
+          <div class="dose-top"><b id="dosePct">0%</b><span id="doseLbl">of today's dose</span></div>
+          <div class="track"><div class="fill" id="doseFill"></div><i class="tick" style="left:25%"></i><i class="tick" style="left:50%"></i><i class="tick" style="left:75%"></i></div>
+        </div>
+        <div class="motion">
+          <div class="mbox"><span class="lbl" id="m1Lbl">Cadence</span><div class="val" id="m1Val">--</div><span class="sub" id="m1Sub">Target 100–115</span></div>
+          <div class="mbox"><span class="lbl" id="m2Lbl">Steadiness</span><div class="val" id="m2Val">--</div><span class="sub" id="m2Sub">Stride regularity</span></div>
+        </div>
+        <div class="coach" id="coach" role="status" aria-live="polite"><span class="face" aria-hidden="true">K</span><span id="coachTxt">Easy pace to warm up.</span></div>
+        <div class="sensor">
+          <div class="sensor-top"><span>Band accelerometer · 50 Hz · g</span><span class="legend"><span><i style="background:#ff7a70"></i>x</span><span><i style="background:#45d18b"></i>y</span><span><i style="background:#6fb3ff"></i>z</span></span></div>
+          <canvas id="spark" aria-label="Live accelerometer trace"></canvas>
+          <div class="raw" id="rawLine">x 0.00  y 0.00  z 1.00</div>
+        </div>
+        <div class="btnrow" id="curlRow" hidden>
+          <button class="btn white small" id="repBtn">Do a rep (Space)</button>
+          <button class="btn white small" id="sideBtn">Switch to left arm</button>
+        </div>
+        <div class="btnrow">
+          <button class="btn white small" id="pauseBtn">Pause</button>
+          <button class="btn sun small" id="tossBtn">Play Ring Toss</button>
+          <button class="btn red small" id="finishBtn">Finish</button>
+        </div>
+      </section>
+
+      <!-- 4 ring toss -->
+      <section class="screen" id="scr-toss" hidden aria-labelledby="h-toss">
+        <p class="eyebrow">Minigame · band on your wrist</p>
+        <h2 id="h-toss">Ring Toss</h2>
+        <p class="lede">Lift the dumbbell slowly to throw a ring. A slower lift throws it farther. Hold the big button (or Space) while you lift, then let go.</p>
+        <div class="toss-stats">
+          <div><b id="tLeft">10</b><span>rings left</span></div>
+          <div><b id="tHits">0</b><span>on a peg</span></div>
+          <div><b id="tPts">0</b><span>points</span></div>
+        </div>
+        <div>
+          <div class="liftread"><span class="note">Lift time</span><b id="liftT">0.0 s</b></div>
+          <div class="meter" id="meter">
+            <div class="zone z1" id="z1">10</div><div class="zone z2" id="z2">20</div><div class="zone z3" id="z3">30</div>
+            <div class="needle" id="needle"></div>
+          </div>
+          <div class="meter-scale"><span>0 s</span><span>1 s</span><span>2 s</span><span>3 s</span></div>
+        </div>
+        <button class="btn wide holdbtn" id="holdBtn">Hold to lift</button>
+        <div class="rings" id="ringRow" aria-label="Rings"></div>
+        <div class="mini-vitals"><span class="chip" id="tHr">Heart -- bpm</span><span class="chip" id="tO2">Oxygen --%</span><span class="chip band"><i></i>Band on wrist</span></div>
+        <div class="result" id="tossResult" hidden>
+          <h3 id="trTitle">Nice tossing!</h3>
+          <p id="trBody"></p>
+          <div class="btnrow"><button class="btn small" id="tossAgain">Play again</button><button class="btn white small" id="tossDone">Back to workout</button></div>
+        </div>
+        <div class="btnrow"><button class="btn white small" id="tossBack">Back to workout</button><button class="btn white small" id="tossAuto" aria-pressed="false">Auto-play (demo)</button></div>
+      </section>
+
+      <!-- 5 summary -->
+      <section class="screen" id="scr-summary" hidden aria-labelledby="h-sum">
+        <p class="eyebrow">Step 5 of 6 · session summary</p>
+        <h2 id="h-sum">Great work!</h2>
+        <div class="sum-top">
+          <svg class="ring-svg" width="132" height="132" viewBox="0 0 132 132" aria-hidden="true">
+            <circle cx="66" cy="66" r="54" fill="none" stroke="#e7f0f8" stroke-width="16"/>
+            <circle id="sumArc" cx="66" cy="66" r="54" fill="none" stroke="#22a95a" stroke-width="16" stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3" transform="rotate(-90 66 66)"/>
+            <text id="sumPct" x="66" y="74" text-anchor="middle" font-family="Baloo 2, sans-serif" font-weight="800" font-size="32" fill="#14304b">0%</text>
+          </svg>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1">
+            <div class="stars" id="stars"></div>
+            <p id="sumDose" style="font:800 22px/1.15 var(--f-display)">of today's dose</p>
+            <p class="note" id="sumNote"></p>
+          </div>
+        </div>
+        <div class="grid3" id="sumGrid"></div>
+        <ul class="stickers" id="stickers"></ul>
+        <p class="privacy" id="sumPrivacy"></p>
+        <div class="btnrow"><button class="btn sun" id="toPodium">See the podium</button><button class="btn white" id="againBtn">New workout</button></div>
+      </section>
+
+      <!-- 6 podium -->
+      <section class="screen" id="scr-podium" hidden aria-labelledby="h-pod">
+        <p class="eyebrow">Step 6 of 6 · community</p>
+        <h2 id="h-pod">This week's podium</h2>
+        <p class="lede">Ranked by how much of their own prescribed dose people kept. Speed and heart numbers never count.</p>
+        <div class="tabs" role="tablist" aria-label="Group">
+          <button class="tab" role="tab" data-tab="all" aria-selected="true">Everyone</button>
+          <button class="tab" role="tab" data-tab="plaza" aria-selected="false">Tuesday plaza</button>
+          <button class="tab" role="tab" data-tab="home" aria-selected="false">At-home grads</button>
+        </div>
+        <div class="goal"><div class="dose-top"><b style="font-size:20px">Group goal</b><span id="goalTxt"></span></div><div class="track"><div class="fill" id="goalFill"></div></div></div>
+        <ol class="board" id="board"></ol>
+        <p class="privacy">Only first names and sessions kept are shared with the group. Heart rate, oxygen and alerts go to your instructor only.</p>
+        <div class="btnrow"><button class="btn" id="podAgain">New workout</button><button class="btn white" id="podPlayers">Switch player</button></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="alert-wrap" id="alertWrap" hidden>
+  <div class="alert" id="alertBox" role="alertdialog" aria-modal="true" aria-labelledby="alertTitle" aria-describedby="alertBody">
+    <div class="alert-ico" id="alertIco" aria-hidden="true"></div>
+    <h2 id="alertTitle">Time for a break</h2>
+    <p id="alertBody"></p>
+    <div class="alert-live" id="alertLive"></div>
+    <div class="btnrow" id="alertBtns"></div>
+  </div>
+</div>
+
+<button class="btn sun small demo-btn" id="demoBtn" aria-expanded="false" aria-controls="demoPanel">Demo controls</button>
+<div class="demo" id="demoPanel" hidden role="dialog" aria-label="Demo controls">
+  <h3>Demo controls</h3>
+  <div class="dgroup"><span>Go to</span><div>
+    <button class="dbtn" data-dgo="players">Player</button><button class="dbtn" data-dgo="workout">Workout</button><button class="dbtn" data-dgo="session">Exercise</button><button class="dbtn" data-dgo="toss">Ring Toss</button><button class="dbtn" data-dgo="summary">Summary</button><button class="dbtn" data-dgo="podium">Podium</button>
+  </div></div>
+  <div class="dgroup"><span>Start a workout</span><div>
+    <button class="dbtn" data-dw="walk">Walk (band on leg)</button><button class="dbtn" data-dw="bike">Bike (band on leg)</button><button class="dbtn" data-dw="curl">Curls (band on wrist)</button>
+  </div></div>
+  <div class="dgroup"><span>Time speed</span><div>
+    <button class="dbtn" data-sp="1" aria-pressed="false">1×</button><button class="dbtn" data-sp="4" aria-pressed="true">4×</button><button class="dbtn" data-sp="10" aria-pressed="false">10×</button>
+  </div></div>
+  <div class="dgroup"><span>Safety moments</span><div>
+    <button class="dbtn alarm" data-ev="dip">Oxygen dip</button><button class="dbtn alarm" data-ev="spike">Heart spike</button><button class="dbtn alarm" data-ev="still">No movement</button><button class="dbtn alarm" data-ev="overdo">Overdo the dose</button>
+  </div></div>
+  <div class="dgroup"><span>Shortcuts</span><div>
+    <button class="dbtn" data-ev="almost">Jump to 95% dose</button><button class="dbtn" data-ev="rep">Do a curl rep</button><button class="dbtn" data-ev="autotoss">Auto ring toss</button>
+  </div></div>
+  <p class="hint">Keyboard: Space does a curl rep, and in Ring Toss hold Space to lift. Drag the 3D view to turn the diorama.</p>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const RM=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const noise=()=>(Math.random()+Math.random()+Math.random()-1.5)*0.66;
+const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
+const fmt=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+const hex=n=>'#'+n.toString(16).padStart(6,'0');
+
+/* ---------------- data ---------------- */
+const PROFILES=[
+ {id:'margaret',name:'Margaret',full:'Margaret O.',age:72,program:'General fitness',group:'plaza',coach:'Kim',rest:72,spo2:97,zone:[96,118],
+  look:{skin:0xf5c9a6,shirt:0xff7a59,pants:0x3d6fd1,hair:0xdcdce2,style:'bun'},
+  dose:{walk:{min:12,cad:[100,115]},bike:{min:15,rpm:[55,65]},curl:{reps:24,kg:2,sets:'2 sets of 12'}}},
+ {id:'desmond',name:'Desmond',full:'Desmond K.',age:67,program:'Stroke recovery',group:'plaza',coach:'Kim',rest:76,spo2:96,zone:[90,112],
+  look:{skin:0x8d5a3b,shirt:0x2fb67c,pants:0x30425c,hair:0x2b2b2b,style:'short'},
+  dose:{walk:{min:10,cad:[95,110]},bike:{min:12,rpm:[50,60]},curl:{reps:20,kg:1,sets:'2 sets of 10'}}},
+ {id:'ruth',name:'Ruth',full:'Ruth A.',age:78,program:'Graduate, exercising at home',group:'home',coach:'Priya',rest:70,spo2:97,zone:[92,115],
+  look:{skin:0xffdcc0,shirt:0x8a6cf0,pants:0x4b4f8a,hair:0xffffff,style:'bob'},
+  dose:{walk:{min:15,cad:[100,112]},bike:{min:15,rpm:[55,65]},curl:{reps:24,kg:2,sets:'2 sets of 12'}}},
+ {id:'arjun',name:'Arjun',full:'Arjun P.',age:63,program:'Support during cancer treatment',group:'home',coach:'Priya',rest:78,spo2:97,zone:[88,108],
+  look:{skin:0xc68a5e,shirt:0x1f9fd6,pants:0x2d3a4a,hair:0x1c1c1c,style:'mustache'},
+  dose:{walk:{min:8,cad:[95,108]},bike:{min:10,rpm:[50,60]},curl:{reps:16,kg:1,sets:'2 sets of 8'}}}
+];
+const EXTRAS=[
+ {id:'lena',name:'Lena',group:'plaza',look:{skin:0xf1c3a0,shirt:0xffc531,pants:0x6a4fd0,hair:0xa0522d,style:'bob'}},
+ {id:'walter',name:'Walter',group:'plaza',look:{skin:0xe8b48f,shirt:0x2a9d8f,pants:0x333a55,hair:0xcfcfcf,style:'short'}},
+ {id:'bea',name:'Bea',group:'plaza',look:{skin:0x7a4a32,shirt:0xff8fb1,pants:0x3d5a80,hair:0x222222,style:'bun'}},
+ {id:'grace',name:'Grace',group:'home',look:{skin:0xffe0c8,shirt:0x5ec26a,pants:0x2f4858,hair:0xe6e6e6,style:'bun'}},
+ {id:'tomas',name:'Tomás',group:'home',look:{skin:0xd29b70,shirt:0xf26b38,pants:0x2b3a55,hair:0x5a3a22,style:'mustache'}}
+];
+const PEOPLE={};PROFILES.concat(EXTRAS).forEach(p=>PEOPLE[p.id]=p);
+const BOARD={margaret:{done:4,of:5,streak:6},desmond:{done:3,of:4,streak:3},ruth:{done:5,of:5,streak:14},arjun:{done:2,of:3,streak:2},
+ lena:{done:5,of:5,streak:9},walter:{done:4,of:5,streak:4},bea:{done:2,of:4,streak:2},grace:{done:4,of:4,streak:8},tomas:{done:3,of:5,streak:5}};
+const WK={
+ walk:{name:'Walk or jog',short:'Walk',band:'right ankle',limb:'leg',verb:'Start walking'},
+ bike:{name:'Cycling',short:'Bike',band:'right shin',limb:'leg',verb:'Start pedalling'},
+ curl:{name:'Dumbbell curls',short:'Curls',band:'right wrist',limb:'wrist',verb:'Start curls'}
+};
+function doseText(p,w){const d=p.dose[w];
+ if(w==='walk')return d.min+' minutes at '+d.cad[0]+'–'+d.cad[1]+' steps per minute';
+ if(w==='bike')return d.min+' minutes at '+d.rpm[0]+'–'+d.rpm[1]+' pedal turns per minute (RPM)';
+ return d.reps+' curls ('+d.sets+') with a '+d.kg+' kg dumbbell, about 3 seconds each';}
+
+const App={screen:'players',profile:PROFILES[0],workout:'walk',preview:null,sound:false,speed:4,tab:'all'};
+let S=null, TS=null, G=null, T=0;
+
+/* ---------------- audio ---------------- */
+let AC=null;
+function tone(f,d,type,vol,delay){
+ if(!App.sound||!AC)return;
+ try{const t=AC.currentTime+(delay||0);const o=AC.createOscillator(),g=AC.createGain();
+  o.type=type||'sine';o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(vol||0.12,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+  o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+0.05);}catch(e){}
+}
+const sfx={
+ tap(){tone(880,.08,'sine',.07);},
+ rep(){tone(660,.12,'triangle',.1);},
+ chime(){tone(784,.18,'sine',.11);tone(1047,.3,'sine',.1,.12);},
+ plink(){tone(1320,.12,'triangle',.1);tone(1760,.2,'triangle',.08,.08);},
+ miss(){tone(330,.18,'sine',.08);tone(262,.25,'sine',.07,.12);},
+ alert(){tone(466,.32,'square',.05);tone(370,.42,'square',.05,.34);},
+ fanfare(){[523,659,784,1047].forEach((f,i)=>tone(f,.32,'triangle',.11,i*.14));},
+ whoosh(){tone(520,.25,'sine',.05);tone(740,.2,'sine',.04,.08);}
+};
+$('soundBtn').addEventListener('click',()=>{
+ App.sound=!App.sound;
+ if(App.sound&&!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){AC=null;}}
+ if(AC&&AC.state==='suspended')AC.resume();
+ $('soundBtn').setAttribute('aria-pressed',String(App.sound));
+ $('soundLbl').textContent=App.sound?'Sound on':'Sound off';
+ $('soundWave').setAttribute('opacity',App.sound?'1':'.3');
+ if(App.sound)sfx.chime();
+});
+
+/* ---------------- toast ---------------- */
+let toastT=0;
+function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2600);}
+
+/* ================= 3D WORLD ================= */
+const C_POS={x:2.0,z:-2.6}, ROTY=-0.5, PEG_D=[1.4,2.1,2.8], PEG_PTS=[10,20,30];
+const holdToDist=h=>0.55+1.0*h;
+
+function initGL(){
+ if(typeof THREE==='undefined')return null;
+ let ok=false;try{const tc=document.createElement('canvas');ok=!!(window.WebGLRenderingContext&&(tc.getContext('webgl')||tc.getContext('experimental-webgl')));}catch(e){}
+ if(!ok)return null;
+ const host=$('gl');
+ const renderer=new THREE.WebGLRenderer({antialias:true});
+ renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ host.appendChild(renderer.domElement);
+ const scene=new THREE.Scene();
+ const camera=new THREE.PerspectiveCamera(40,1,0.1,200);
+ const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+
+ // sky gradient
+ {const c=document.createElement('canvas');c.width=4;c.height=512;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,512);
+  g.addColorStop(0,'#2f93e6');g.addColorStop(.5,'#8fd0ff');g.addColorStop(.85,'#d9f0ff');g.addColorStop(1,'#f2faff');x.fillStyle=g;x.fillRect(0,0,4,512);
+  scene.background=new THREE.CanvasTexture(c);}
+ scene.add(new THREE.HemisphereLight(0xe9f6ff,0x93c47a,0.62));
+ scene.add(new THREE.AmbientLight(0xffffff,0.14));
+ const sun=new THREE.DirectionalLight(0xfff4e0,0.78);sun.position.set(7,14,9);sun.castShadow=true;
+ sun.shadow.mapSize.set(2048,2048);const sc=sun.shadow.camera;sc.left=-11;sc.right=11;sc.top=11;sc.bottom=-11;sc.near=1;sc.far=40;sun.shadow.bias=-0.0006;
+ scene.add(sun);
+
+ const P=(c,o)=>new THREE.MeshPhongMaterial(Object.assign({color:c,shininess:90,specular:0x3a3a3a},o||{}));
+ function M(geo,mat,parent,x,y,z,cast){const m=new THREE.Mesh(geo,mat);m.position.set(x||0,y||0,z||0);m.castShadow=cast!==false;m.receiveShadow=true;if(parent)parent.add(m);return m;}
+ function rod(a,b,r,mat,parent){const d=new THREE.Vector3().subVectors(b,a);const len=d.length();const m=M(new THREE.CylinderGeometry(r,r,len,12),mat,parent);m.position.copy(a).addScaledVector(d,.5);m.quaternion.setFromUnitVectors(V(0,1,0),d.normalize());return m;}
+ function rr(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();}
+ const FONT=s=>'800 '+s+'px "Baloo 2","Arial Rounded MT Bold",sans-serif';
+ function textCanvas(text,o){o=o||{};const w=o.w||512,h=o.h||128;const c=document.createElement('canvas');c.width=w;c.height=h;drawText(c,text,o);return c;}
+ function drawText(c,text,o){const x=c.getContext('2d'),w=c.width,h=c.height;x.clearRect(0,0,w,h);x.font=FONT(o.size||72);x.textAlign='center';x.textBaseline='middle';
+  if(o.pill){const tw=Math.min(w-12,x.measureText(text).width+56);rr(x,(w-tw)/2,h*.12,tw,h*.76,h*.38);x.fillStyle=o.bg||'#fff';x.fill();x.lineWidth=7;x.strokeStyle=o.color||'#1f7ae0';x.stroke();x.fillStyle=o.fg||o.color||'#14304b';x.fillText(text,w/2,h/2+5);}
+  else{x.lineJoin='round';x.lineWidth=18;x.strokeStyle='#ffffff';x.strokeText(text,w/2,h/2+5);x.fillStyle=o.color||'#1f7ae0';x.fillText(text,w/2,h/2+5);}}
+ function textSprite(text,o){o=o||{};const c=textCanvas(text,o);const tex=new THREE.CanvasTexture(c);const m=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});const s=new THREE.Sprite(m);const sc=o.scale||1;s.scale.set(sc*(c.width/c.height)*.5,sc*.5,1);s.userData={canvas:c,opts:o,text};return s;}
+ const redrawList=[];
+ function glowTex(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');const g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.3,'rgba(255,255,255,.55)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
+ const GLOW=glowTex();
+
+ /* --- diorama --- */
+ const table=M(new THREE.CylinderGeometry(20,20,0.5,72),P(0xf0dcb8,{shininess:30}),scene,0,-1.25,0);table.castShadow=false;
+ M(new THREE.CylinderGeometry(9,9.35,1.0,96),P(0xfdfbf6,{shininess:110,specular:0x666666}),scene,0,-0.5,0);
+ const trim=M(new THREE.TorusGeometry(9.06,0.13,14,120),P(0x37a6ff,{shininess:140,specular:0xffffff}),scene,0,-0.06,0);trim.rotation.x=Math.PI/2;
+ const trim2=M(new THREE.TorusGeometry(9.26,0.1,14,120),P(0xffc531,{shininess:140,specular:0xffffff}),scene,0,-0.72,0);trim2.rotation.x=Math.PI/2;
+ M(new THREE.CylinderGeometry(8.9,8.9,0.06,96),P(0x6ccb63,{shininess:25}),scene,0,0.03,0).castShadow=false;
+ const flat=(geo,mat,y)=>{const m=M(geo,mat,scene,0,y,0,false);m.rotation.x=-Math.PI/2;return m;};
+ flat(new THREE.RingGeometry(5.3,6.5,128),P(0xff8a63,{shininess:40}),0.065);
+ [5.32,5.9,6.48].forEach(r=>flat(new THREE.RingGeometry(r-0.025,r+0.025,128),new THREE.MeshPhongMaterial({color:0xffffff}),0.07));
+ {const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle='#f4f8fc';x.fillRect(0,0,256,256);x.fillStyle='#e2ecf6';
+  for(let i=0;i<4;i++)for(let j=0;j<4;j++)if((i+j)%2)x.fillRect(i*64,j*64,64,64);x.strokeStyle='#cfdeeb';x.lineWidth=3;
+  for(let i=0;i<=4;i++){x.beginPath();x.moveTo(i*64,0);x.lineTo(i*64,256);x.stroke();x.beginPath();x.moveTo(0,i*64);x.lineTo(256,i*64);x.stroke();}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(7,7);
+  flat(new THREE.CircleGeometry(4.75,96),new THREE.MeshPhongMaterial({map:t,shininess:50}),0.066);}
+ flat(new THREE.RingGeometry(4.72,4.9,96),P(0xffffff),0.068);
+ // start line
+ {const m=M(new THREE.PlaneGeometry(1.2,0.12),new THREE.MeshPhongMaterial({color:0xffffff}),scene,5.9,0.072,0,false);m.rotation.x=-Math.PI/2;}
+ // trees + flowers
+ const trunkM=P(0xb07a4a,{shininess:30});const leafMs=[P(0x45b85a,{shininess:70}),P(0x6fd16a,{shininess:70}),P(0x2fa56a,{shininess:70})];
+ for(let i=0;i<12;i++){const a=i/12*Math.PI*2+0.25;const r=7.7+(i%2)*0.55;const g=new THREE.Group();g.position.set(Math.cos(a)*r,0,Math.sin(a)*r);scene.add(g);
+  const s=0.8+(i%3)*0.15;g.scale.setScalar(s);M(new THREE.CylinderGeometry(0.11,0.15,0.8,10),trunkM,g,0,0.4,0);M(new THREE.SphereGeometry(0.58,20,14),leafMs[i%3],g,0,1.15,0);M(new THREE.SphereGeometry(0.36,16,12),leafMs[(i+1)%3],g,0.3,1.5,0.1);}
+ const flowerCols=[0xff6b8a,0xffd23f,0xffffff,0xb48cff,0xff9f43];
+ const fg=new THREE.SphereGeometry(0.07,10,8);
+ for(let i=0;i<70;i++){const a=Math.random()*Math.PI*2,r=rnd(6.75,8.8);M(fg,P(flowerCols[i%5],{shininess:60}),scene,Math.cos(a)*r,0.1,Math.sin(a)*r,false);}
+ // clouds
+ const clouds=new THREE.Group();scene.add(clouds);const cm=P(0xffffff,{emissive:0xd8ecff,emissiveIntensity:.5,shininess:15});
+ for(let i=0;i<7;i++){const g=new THREE.Group();const a=i/7*Math.PI*2;const r=rnd(13,17);g.position.set(Math.cos(a)*r,rnd(6,9.5),Math.sin(a)*r);clouds.add(g);
+  for(let k=0;k<4;k++){const m=M(new THREE.SphereGeometry(rnd(0.9,1.5),18,12),cm,g,(k-1.5)*1.1,rnd(-.2,.4),rnd(-.4,.4),false);m.receiveShadow=false;}}
+ {const sunM=new THREE.Mesh(new THREE.SphereGeometry(1.8,24,16),new THREE.MeshBasicMaterial({color:0xffe27a}));sunM.position.set(-16,18,-30);scene.add(sunM);
+  const sg=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color:0xfff1b0,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));sg.scale.setScalar(12);sunM.add(sg);}
+ // water bottle + mat props
+ {const mat=M(new THREE.CylinderGeometry(0.9,0.9,0.03,40),P(0x8a6cf0,{shininess:60}),scene,C_POS.x,0.08,C_POS.z,false);mat.receiveShadow=true;
+  M(new THREE.CylinderGeometry(0.09,0.09,0.36,16),P(0x37a6ff,{shininess:140,specular:0xffffff,transparent:true,opacity:.85}),scene,-2.1,0.26,1.0);
+  M(new THREE.CylinderGeometry(0.06,0.06,0.06,12),P(0xffffff),scene,-2.1,0.47,1.0);}
+
+ /* --- bike --- */
+ const bike=new THREE.Group();bike.position.set(-2.9,0.07,0.4);scene.add(bike);
+ const frameM=P(0x1f7ae0,{shininess:140,specular:0xffffff}),tyreM=P(0x26313f,{shininess:50}),chromeM=P(0xe3ebf3,{shininess:160,specular:0xffffff}),seatM=P(0x2b2b33,{shininess:80}),gripM=P(0xff5d73,{shininess:100});
+ const wheels=[];
+ for(const x of [-0.6,0.62]){const w=new THREE.Group();w.position.set(x,0.4,0);bike.add(w);M(new THREE.TorusGeometry(0.34,0.05,14,40),tyreM,w);
+  const hub=M(new THREE.CylinderGeometry(0.07,0.07,0.1,16),P(0xffc531,{shininess:140}),w);hub.rotation.x=Math.PI/2;
+  for(let i=0;i<3;i++){const sp=M(new THREE.BoxGeometry(0.03,0.62,0.02),chromeM,w);sp.rotation.z=i*Math.PI/3;}wheels.push(w);}
+ rod(V(-0.6,0.4,0),V(0,0.38,0),0.035,frameM,bike);rod(V(0,0.38,0),V(-0.25,0.68,0),0.04,frameM,bike);rod(V(-0.25,0.66,0),V(0.5,0.9,0),0.04,frameM,bike);
+ rod(V(0.5,0.92,0),V(0.62,0.4,0),0.035,frameM,bike);rod(V(-0.6,0.4,0),V(-0.25,0.66,0),0.03,frameM,bike);
+ {const seat=M(new THREE.SphereGeometry(1,20,12),seatM,bike,-0.27,0.72,0);seat.scale.set(0.2,0.055,0.13);
+  const bar=M(new THREE.CylinderGeometry(0.03,0.03,0.5,12),chromeM,bike,0.5,0.95,0);bar.rotation.x=Math.PI/2;
+  M(new THREE.SphereGeometry(0.05,12,8),gripM,bike,0.5,0.95,0.25);M(new THREE.SphereGeometry(0.05,12,8),gripM,bike,0.5,0.95,-0.25);
+  rod(V(-0.6,0.4,0.1),V(-0.78,-0.02,0.32),0.03,chromeM,bike);rod(V(-0.6,0.4,-0.1),V(-0.78,-0.02,-0.32),0.03,chromeM,bike);
+  M(new THREE.BoxGeometry(0.3,0.08,0.3),P(0xffc531),bike,0.62,0.02,0);}
+ const crank=new THREE.Group();crank.position.set(0,0.38,0);bike.add(crank);
+ {const ring=M(new THREE.TorusGeometry(0.1,0.02,8,24),chromeM,crank,0,0,0.06);
+  M(new THREE.BoxGeometry(0.17,0.035,0.03),chromeM,crank,0.085,0,-0.12);M(new THREE.BoxGeometry(0.1,0.03,0.09),P(0x26313f),crank,0.17,0,-0.17);
+  M(new THREE.BoxGeometry(0.17,0.035,0.03),chromeM,crank,-0.085,0,0.12);M(new THREE.BoxGeometry(0.1,0.03,0.09),P(0x26313f),crank,-0.17,0,0.17);}
+
+ /* --- ring toss board --- */
+ const tossG=new THREE.Group();tossG.position.set(C_POS.x,0,C_POS.z);tossG.rotation.y=ROTY;scene.add(tossG);
+ M(new THREE.BoxGeometry(0.8,0.08,2.2),P(0xffffff,{shininess:120}),tossG,0,0.1,2.1);
+ const pegCols=[0xffc531,0x37a6ff,0xff5d73];const pegFlags=[];
+ PEG_D.forEach((d,i)=>{M(new THREE.CylinderGeometry(0.2,0.24,0.08,24),P(pegCols[i]),tossG,0,0.18,d);M(new THREE.CylinderGeometry(0.045,0.05,0.62,14),P(0xfdfbf6,{shininess:120}),tossG,0,0.5,d);M(new THREE.SphereGeometry(0.075,14,10),P(pegCols[i]),tossG,0,0.83,d);
+  const f=textSprite(String(PEG_PTS[i]),{size:84,color:hex(pegCols[i]===0xffc531?0xb88a00:pegCols[i]),w:256,h:128,scale:.62});f.position.set(0,1.18,d);tossG.add(f);pegFlags.push(f);redrawList.push(f);});
+ tossG.updateMatrixWorld(true);
+ const pegWorld=PEG_D.map(d=>tossG.localToWorld(V(0,0,d)));
+ const tossDir=V(Math.sin(ROTY),0,Math.cos(ROTY));
+
+ /* --- podium --- */
+ const pod=new THREE.Group();pod.position.set(-1.8,0.07,-2.4);pod.rotation.y=0.35;scene.add(pod);
+ const PODX=[0,-0.95,0.95],PODH=[1.0,0.7,0.5],PODC=[0xffcf3f,0xd6e0ea,0xf3a56b],PODI=['#a87800','#56708a','#a5582a'];
+ const podFaces=[];
+ PODX.forEach((x,i)=>{const c=document.createElement('canvas');c.width=c.height=256;const tex=new THREE.CanvasTexture(c);
+  const paint=()=>{const g=c.getContext('2d');g.fillStyle=hex(PODC[i]);g.fillRect(0,0,256,256);g.font=FONT(170);g.textAlign='center';g.textBaseline='middle';g.fillStyle='#ffffff';g.fillText(String(i+1),128,142);g.lineWidth=6;g.strokeStyle=PODI[i];g.strokeText(String(i+1),128,142);tex.needsUpdate=true;};paint();podFaces.push(paint);
+  const side=P(PODC[i],{shininess:120,specular:0x888888});const front=new THREE.MeshPhongMaterial({map:tex,shininess:120,specular:0x888888});
+  const b=new THREE.Mesh(new THREE.BoxGeometry(0.92,PODH[i],0.92),[side,side,side,side,front,side]);b.position.set(x,PODH[i]/2,0);b.castShadow=b.receiveShadow=true;pod.add(b);});
+
+ /* --- avatars --- */
+ const AG={head:new THREE.SphereGeometry(0.36,32,24),body:new THREE.SphereGeometry(0.36,28,20),pelvis:new THREE.SphereGeometry(0.27,22,16),joint:new THREE.SphereGeometry(0.105,16,12),
+  upper:new THREE.CylinderGeometry(0.085,0.08,0.34,14),fore:new THREE.CylinderGeometry(0.075,0.068,0.3,14),hand:new THREE.SphereGeometry(0.1,16,12),
+  thigh:new THREE.CylinderGeometry(0.11,0.1,0.4,14),shin:new THREE.CylinderGeometry(0.095,0.085,0.36,14),knee:new THREE.SphereGeometry(0.1,14,10),foot:new THREE.SphereGeometry(0.12,16,12),
+  eye:new THREE.SphereGeometry(0.048,14,10),glint:new THREE.SphereGeometry(0.017,8,6),smile:new THREE.TorusGeometry(0.1,0.022,8,20,Math.PI),cheek:new THREE.SphereGeometry(0.06,12,8),
+  nose:new THREE.SphereGeometry(0.05,12,8),cap:new THREE.SphereGeometry(0.385,30,18,0,Math.PI*2,0,Math.PI*0.52),bun:new THREE.SphereGeometry(0.16,16,12),blob:new THREE.SphereGeometry(1,16,12)};
+ const ink=P(0x1a2230,{shininess:150,specular:0xffffff}),glint=new THREE.MeshBasicMaterial({color:0xffffff}),pink=P(0xff8aa0,{shininess:20}),shoeM=P(0xffffff,{shininess:120});
+ function makeAvatar(person){
+  const L=person.look;const root=new THREE.Group();
+  const skin=P(L.skin,{shininess:60}),shirt=P(L.shirt,{shininess:110,specular:0x555555}),pants=P(L.pants),hair=P(L.hair,{shininess:45});
+  const hips=new THREE.Group();hips.position.y=0.86;root.add(hips);
+  M(AG.pelvis,pants,hips).scale.set(1.15,0.82,0.92);
+  const torso=new THREE.Group();torso.position.y=0.05;hips.add(torso);
+  M(AG.body,shirt,torso,0,0.36,0).scale.set(1,1.2,0.84);
+  const neck=new THREE.Group();neck.position.y=0.72;torso.add(neck);
+  const head=new THREE.Group();head.position.y=0.33;neck.add(head);
+  M(AG.head,skin,head);
+  for(const s of [-1,1]){M(AG.eye,ink,head,0.13*s,0.04,0.31,false);M(AG.glint,glint,head,0.13*s+0.017,0.066,0.353,false);M(AG.cheek,pink,head,0.21*s,-0.07,0.27,false).scale.z=0.4;}
+  const sm=M(AG.smile,ink,head,0,-0.085,0.31,false);sm.rotation.z=Math.PI;sm.rotation.x=-0.3;
+  M(AG.nose,skin,head,0,-0.01,0.355,false);
+  M(AG.cap,hair,head,0,0.03,-0.02).rotation.x=-0.38;
+  if(L.style==='bun')M(AG.bun,hair,head,0,0.32,-0.24);
+  if(L.style==='bob')M(AG.blob,hair,head,0,-0.06,-0.1).scale.set(0.41,0.3,0.32);
+  if(L.style==='mustache')M(AG.blob,hair,head,0,-0.06,0.33,false).scale.set(0.11,0.03,0.04);
+  const p={hips,torso,head};
+  for(const [s,k] of [[1,'L'],[-1,'R']]){
+   const sh=new THREE.Group();sh.position.set(0.34*s,0.62,0);torso.add(sh);M(AG.joint,shirt,sh);M(AG.upper,shirt,sh,0,-0.17,0);
+   const el=new THREE.Group();el.position.y=-0.34;sh.add(el);M(AG.knee,skin,el).scale.setScalar(0.8);M(AG.fore,skin,el,0,-0.15,0);
+   const hand=new THREE.Group();hand.position.y=-0.33;el.add(hand);M(AG.hand,skin,hand);
+   const hp=new THREE.Group();hp.position.set(0.15*s,-0.04,0);hips.add(hp);M(AG.thigh,pants,hp,0,-0.2,0);
+   const kn=new THREE.Group();kn.position.y=-0.4;hp.add(kn);M(AG.knee,skin,kn);M(AG.shin,skin,kn,0,-0.18,0);
+   M(AG.foot,shoeM,kn,0,-0.37,0.06).scale.set(1,0.6,1.55);
+   p['sh'+k]=sh;p['el'+k]=el;p['hand'+k]=hand;p['hip'+k]=hp;p['kn'+k]=kn;
+  }
+  root.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+  return {root,p,state:'idle',seed:Math.random()*6,m:1,phase:0,crank:0,curl:0,side:'R',jog:0,person,tag:null};
+ }
+ const avs={};PROFILES.forEach(p=>avs[p.id]=makeAvatar(p));
+ const getAv=id=>avs[id]||(avs[id]=makeAvatar(PEOPLE[id]));
+ function place(a,parent,x,y,z,ry){parent.add(a.root);a.root.position.set(x,y,z);a.root.rotation.set(0,ry||0,0);a.root.visible=true;}
+
+ const L1=0.4,L2=0.38;
+ function ik(dz,dy){let d=Math.hypot(dz,dy);d=clamp(d,0.15,L1+L2-1e-4);const phi=Math.atan2(-dz,-dy);
+  const a=Math.acos(clamp((L1*L1+d*d-L2*L2)/(2*L1*d),-1,1));const b=Math.acos(clamp((L1*L1+L2*L2-d*d)/(2*L1*L2),-1,1));return [phi-a,Math.PI-b];}
+ function pose(av,t){
+  const p=av.p,st=av.state;
+  p.hips.position.set(0,0.86,0);p.hips.rotation.set(0,0,0);p.torso.rotation.set(0,0,0);p.head.rotation.set(0,0,0);
+  p.shL.rotation.set(0,0,0.12);p.shR.rotation.set(0,0,-0.12);p.elL.rotation.set(0,0,0);p.elR.rotation.set(0,0,0);
+  p.hipL.rotation.set(0,0,0);p.hipR.rotation.set(0,0,0);p.knL.rotation.set(0,0,0);p.knR.rotation.set(0,0,0);
+  const br=Math.sin(t*2+av.seed)*0.012;const rm=RM?0:1;
+  if(st==='idle'){p.hips.position.y+=br*rm;p.head.rotation.z=Math.sin(t*0.9+av.seed)*0.06*rm;p.elL.rotation.x=p.elR.rotation.x=-0.15;}
+  else if(st==='hop'){const h=rm*Math.abs(Math.sin(t*4.2));p.hips.position.y+=h*0.22;p.shL.rotation.z=0.4+h*1.3;p.shR.rotation.z=-0.4-h*1.3;p.knL.rotation.x=p.knR.rotation.x=(1-h)*0.3;p.hipL.rotation.x=p.hipR.rotation.x=-(1-h)*0.15;}
+  else if(st==='wave'){p.hips.position.y+=br*rm;p.shR.rotation.z=-2.6;p.elR.rotation.z=Math.sin(t*6+av.seed)*0.5*rm;p.head.rotation.z=0.08;}
+  else if(st==='cheer'){const h=rm*Math.abs(Math.sin(t*3.6+av.seed));p.hips.position.y+=h*0.3;p.shL.rotation.z=2.5;p.shR.rotation.z=-2.5;p.elL.rotation.z=Math.sin(t*8)*0.3*rm;p.elR.rotation.z=-Math.sin(t*8)*0.3*rm;p.knL.rotation.x=p.knR.rotation.x=(1-h)*0.35;p.hipL.rotation.x=p.hipR.rotation.x=-(1-h)*0.2;}
+  else if(st==='run'){const ph=av.phase,m=av.m,j=av.jog;const sw=Math.sin(ph)*(0.45+0.25*j)*m;
+   p.hipL.rotation.x=-sw;p.hipR.rotation.x=sw;const ka=(0.55+0.5*j)*m;p.knL.rotation.x=Math.max(0,Math.cos(ph))*ka+0.05;p.knR.rotation.x=Math.max(0,-Math.cos(ph))*ka+0.05;
+   p.shL.rotation.x=sw*0.9;p.shR.rotation.x=-sw*0.9;p.elL.rotation.x=p.elR.rotation.x=-(0.45+0.8*j)*m-0.1;
+   p.hips.position.y+=Math.abs(Math.cos(ph))*0.05*m*(1+j);p.torso.rotation.x=(0.06+0.1*j)*m;p.hips.rotation.y=Math.sin(ph)*0.08*m;}
+  else if(st==='bike'||st==='bikeRest'){const a=-av.crank;
+   for(const [k,off] of [['L',0],['R',Math.PI]]){const pa=a+off;const dz=0.25+0.17*Math.cos(pa),dy=-0.55+0.17*Math.sin(pa);const r=ik(dz,dy);p['hip'+k].rotation.x=r[0];p['kn'+k].rotation.x=r[1];}
+   p.hips.position.y=0.86;p.torso.rotation.x=st==='bike'?0.32:0.15;p.head.rotation.x=-0.25;p.shL.rotation.x=p.shR.rotation.x=-1.05;p.elL.rotation.x=p.elR.rotation.x=-0.35;
+   if(st==='bike')p.head.rotation.z=Math.sin(av.crank)*0.04;}
+  else if(st==='curl'){const s=av.side,o=s==='R'?'L':'R';p['sh'+s].rotation.x=-0.12;p['el'+s].rotation.x=-av.curl;p['sh'+o].rotation.x=0.05;p['el'+o].rotation.x=-0.1;
+   p.knL.rotation.x=p.knR.rotation.x=0.06;p.hipL.rotation.x=p.hipR.rotation.x=-0.03;p.hips.position.y+=br*rm-0.01;p.head.rotation.x=0.05+av.curl*0.04;}
+  else if(st==='rest'){p.torso.rotation.x=0.38;p.hips.position.y-=0.08;p.hipL.rotation.x=p.hipR.rotation.x=-0.35;p.knL.rotation.x=p.knR.rotation.x=0.55;
+   p.shL.rotation.x=p.shR.rotation.x=-0.55;p.elL.rotation.x=p.elR.rotation.x=-0.25;p.head.rotation.x=-0.25;p.torso.position.y=0.05+Math.sin(t*1.6)*0.015*rm;}
+  else if(st==='still'){p.hips.position.y=0.32;p.hipL.rotation.x=p.hipR.rotation.x=-1.45;p.knL.rotation.x=p.knR.rotation.x=0.22;p.torso.rotation.x=-0.14;
+   p.shL.rotation.x=p.shR.rotation.x=0.4;p.head.rotation.z=0.18;p.head.rotation.x=0.15;}
+  if(st!=='rest')p.torso.position.y=0.05;
+ }
+
+ /* --- props: band, dumbbell, balloon, bubble --- */
+ const band=new THREE.Group();scene.add(band);
+ const bandMat=new THREE.MeshPhongMaterial({color:0x22b8ff,emissive:0x0aa0ff,emissiveIntensity:.6,shininess:150,specular:0xffffff});
+ M(new THREE.TorusGeometry(0.11,0.036,12,32),bandMat,band).rotation.x=Math.PI/2;
+ M(new THREE.BoxGeometry(0.11,0.08,0.05),P(0x0f2338,{shininess:160,specular:0xffffff}),band,0,0,0.13);
+ const bandScr=new THREE.Mesh(new THREE.PlaneGeometry(0.08,0.055),new THREE.MeshBasicMaterial({color:0x7ff0ff}));bandScr.position.set(0,0,0.157);band.add(bandScr);
+ const bandGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color:0x5fe0ff,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));bandGlow.scale.setScalar(0.8);band.add(bandGlow);
+ band.visible=false;
+ const dumb=new THREE.Group();{const hm=P(0x3b4a5e,{shininess:140,specular:0xffffff}),wm=P(0xff5d73,{shininess:130,specular:0xffffff});
+  const h=M(new THREE.CylinderGeometry(0.03,0.03,0.3,10),hm,dumb);h.rotation.x=Math.PI/2;
+  for(const s of [-1,1]){const w=M(new THREE.CylinderGeometry(0.085,0.085,0.08,20),wm,dumb,0,0,0.15*s);w.rotation.x=Math.PI/2;}}
+ dumb.visible=false;scene.add(dumb);
+ function attachBand(a,w){const side=(S&&S.side)||'R';
+  if(w==='curl'||w==='toss'){a.p['el'+side].add(band);band.position.set(0,-0.25,0);band.scale.setScalar(0.85);}
+  else{a.p.knR.add(band);band.position.set(0,w==='walk'?-0.29:-0.16,0);band.scale.setScalar(1);}
+  band.rotation.set(0,0,0);band.visible=true;}
+ function attachDumb(a){const side=(S&&S.side)||'R';a.p['hand'+side].add(dumb);dumb.position.set(0,-0.03,0);dumb.visible=true;}
+
+ const hs=new THREE.Shape();hs.moveTo(25,25);hs.bezierCurveTo(25,25,20,0,0,0);hs.bezierCurveTo(-30,0,-30,35,-30,35);hs.bezierCurveTo(-30,55,-10,77,25,95);hs.bezierCurveTo(60,77,80,55,80,35);hs.bezierCurveTo(80,35,80,0,50,0);hs.bezierCurveTo(35,0,25,25,25,25);
+ const heartGeo=new THREE.ExtrudeGeometry(hs,{depth:16,bevelEnabled:true,bevelSegments:8,steps:1,bevelSize:10,bevelThickness:10,curveSegments:28});heartGeo.center();
+ const heartMat=new THREE.MeshPhongMaterial({color:0xff3d55,emissive:0x550010,emissiveIntensity:.4,shininess:160,specular:0xffffff});
+ const balloon=new THREE.Group();scene.add(balloon);const heart=new THREE.Mesh(heartGeo,heartMat);heart.rotation.z=Math.PI;heart.castShadow=true;balloon.add(heart);
+ M(new THREE.SphereGeometry(0.05,10,8),heartMat,balloon,0,-0.47,0);
+ const bubble=new THREE.Group();scene.add(bubble);
+ const bubMat=new THREE.MeshPhongMaterial({color:0x8fe0ff,transparent:true,opacity:.42,shininess:200,specular:0xffffff,depthWrite:false});
+ const bubM=new THREE.Mesh(new THREE.SphereGeometry(0.3,32,22),bubMat);bubble.add(bubM);
+ const bubHi=new THREE.Mesh(new THREE.SphereGeometry(0.06,12,8),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9}));bubHi.position.set(-0.1,0.12,0.22);bubble.add(bubHi);
+ const o2tag=textSprite('O₂',{size:80,color:'#0f56a8',w:256,h:128,scale:.45});bubble.add(o2tag);redrawList.push(o2tag);
+ const strMat=new THREE.LineBasicMaterial({color:0x5b6f88});
+ const mkLine=()=>{const g=new THREE.BufferGeometry().setFromPoints([V(0,0,0),V(0,1,0)]);const l=new THREE.Line(g,strMat);scene.add(l);return l;};
+ const str1=mkLine(),str2=mkLine();
+ balloon.visible=bubble.visible=str1.visible=str2.visible=false;
+
+ /* --- popups, rings, confetti, hearts --- */
+ const pops=[];
+ function popup(text,color,pos){const s=textSprite(text,{size:78,color:color||'#1f7ae0',w:640,h:128,scale:.8});s.material.depthTest=false;s.renderOrder=20;s.position.copy(pos);scene.add(s);pops.push({s,t:0});}
+ const ringGeo=new THREE.TorusGeometry(0.15,0.04,12,32);const RCOL=[0xff5d73,0xffc531,0x37b6ff,0x4fcf70,0xa077ff];
+ let rings=[],held=null,ringN=0;const pegCount=[0,0,0];
+ function holdRing(){if(held)return;const m=new THREE.Mesh(ringGeo,new THREE.MeshPhongMaterial({color:RCOL[ringN++%5],shininess:140,specular:0xffffff,transparent:true,opacity:1}));m.castShadow=true;scene.add(m);held=m;}
+ function throwRing(dist,peg,onLand){if(!held)holdRing();const m=held;held=null;
+  const start=m.position.clone();const end=V(C_POS.x,0,C_POS.z).addScaledVector(tossDir,dist);end.y=peg>=0?0.88:0.12;
+  const Tf=0.9,g=-6;const vel=V((end.x-start.x)/Tf,(end.y-start.y-0.5*g*Tf*Tf)/Tf,(end.z-start.z)/Tf);
+  rings.push({m,st:'fly',vel,peg,t:0,Tf,onLand,b:0,ty:0});sfx.whoosh();}
+ function clearRings(){rings.forEach(r=>{scene.remove(r.m);r.m.material.dispose();});rings=[];pegCount[0]=pegCount[1]=pegCount[2]=0;if(held){scene.remove(held);held=null;}}
+ const conf=new THREE.Group();scene.add(conf);conf.visible=false;const confG=new THREE.PlaneGeometry(0.09,0.14);const confC=new THREE.Vector3();
+ const confCols=[0xff5d73,0xffc531,0x37b6ff,0x4fcf70,0xa077ff,0xffffff];
+ if(!RM)for(let i=0;i<110;i++){const m=new THREE.Mesh(confG,new THREE.MeshBasicMaterial({color:confCols[i%6],side:THREE.DoubleSide}));m.userData={v:rnd(0.6,1.3),s:rnd(2,6)};conf.add(m);}
+ function respawnConf(m,top){m.position.set(confC.x+rnd(-2.4,2.4),top?rnd(3,6.5):rnd(0.2,6.5),confC.z+rnd(-2.4,2.4));}
+ const cheers=[];const miniHeartMat=heartMat.clone();
+ function cheerAt(id){const a=avs[id];if(!a||!a.root.visible){return;}const base=new THREE.Vector3();a.p.head.getWorldPosition(base);
+  for(let i=0;i<6;i++){const h=new THREE.Mesh(heartGeo,new THREE.MeshPhongMaterial({color:0xff5d73,shininess:150,specular:0xffffff,transparent:true}));h.rotation.z=Math.PI;h.scale.setScalar(0.0025);h.position.copy(base).add(V(rnd(-.4,.4),0.3+i*0.05,rnd(-.2,.2)));scene.add(h);cheers.push({h,t:-i*0.12});}}
+
+ /* --- modes --- */
+ let mode='lobby',player=avs[PROFILES[0].id];
+ const cam={t:V(0,1.3,2.6),az:0,el:.3,d:8.2},goal={t:V(0,1.3,2.6),az:0,el:.3,d:8.2};
+ let dragAz=0,dragEl=0,dragging=false,lastX=0,lastY=0,idleDrag=0;
+ function arrange(){
+  Object.values(avs).forEach(a=>{a.root.visible=false;if(a.tag)a.tag.visible=false;});
+  band.visible=false;dumb.visible=false;conf.visible=false;scene.add(band);scene.add(dumb);
+  const pl=getAv(App.profile.id);player=pl;
+  const vit=(mode==='walk'||mode==='bike'||mode==='curl'||mode==='toss');
+  balloon.visible=bubble.visible=str1.visible=str2.visible=vit;
+  if(mode==='lobby'||mode==='preview'){
+   PROFILES.forEach((p,i)=>{const a=avs[p.id];place(a,scene,-1.65+i*1.1,0.07,2.6,0);a.state=p.id===App.profile.id?(mode==='lobby'?'hop':'wave'):'idle';});
+   if(mode==='preview'){attachBand(pl,App.preview||App.workout);if((App.preview||App.workout)==='curl')attachDumb(pl);}
+  }else if(mode==='walk'){place(pl,scene,5.9,0.07,0,0);attachBand(pl,'walk');}
+  else if(mode==='bike'){place(pl,bike,-0.25,0.11,0,Math.PI/2);attachBand(pl,'bike');}
+  else if(mode==='curl'||mode==='toss'){place(pl,scene,C_POS.x,0.09,C_POS.z,ROTY);attachBand(pl,'curl');attachDumb(pl);pl.state='curl';}
+  else if(mode==='summary'){place(pl,scene,0,0.07,0.9,0);pl.state='cheer';attachBand(pl,(S&&S.w)||App.workout);
+   if(S&&S.progress>=S.target*0.75){conf.visible=!RM;confC.set(0,0,0.9);conf.children.forEach(m=>respawnConf(m,false));}}
+  dragAz=0;dragEl=0;
+ }
+ function setMode(m){mode=m;arrange();}
+ function showPodium(list,meId){mode='podium';arrange();
+  list.slice(0,3).forEach((e,i)=>{const a=getAv(e.id);place(a,pod,PODX[i],PODH[i],0,0);a.state=i===0?'cheer':'wave';showTag(a,(e.id===meId?'You · ':'')+PEOPLE[e.id].name,e.id===meId);});
+  const myRank=list.findIndex(e=>e.id===meId);
+  if(myRank>2){const a=getAv(meId);place(a,pod,1.95,0,0.35,-0.2);a.state='wave';showTag(a,'You · #'+(myRank+1),true);}
+  conf.visible=!RM;confC.copy(pod.position);conf.children.forEach(m=>respawnConf(m,false));
+ }
+ function showTag(a,text,me){if(a.tag){a.root.remove(a.tag);a.tag.material.map.dispose();a.tag.material.dispose();}
+  const s=textSprite(text,{pill:true,size:60,color:me?'#1f7ae0':'#14304b',bg:me?'#eaf4ff':'#ffffff',w:512,h:128,scale:.7});s.position.set(0,2.85,0);a.root.add(s);a.tag=s;s.visible=true;}
+
+ function setGoal(){
+  const pl=player;const tmp=new THREE.Vector3();
+  if(mode==='lobby'){goal.t.set(0,1.3,2.6);goal.az=0;goal.el=.32;goal.d=8.4;}
+  else if(mode==='preview'){pl.root.getWorldPosition(tmp);goal.t.set(tmp.x,1.15,tmp.z);goal.az=0.45;goal.el=.18;goal.d=4.6;}
+  else if(mode==='walk'){pl.root.getWorldPosition(tmp);goal.t.set(tmp.x,1.2,tmp.z);goal.az=Math.atan2(tmp.x,tmp.z)+0.5;goal.el=.3;goal.d=6.6;}
+  else if(mode==='bike'){goal.t.set(bike.position.x,1.1,bike.position.z);goal.az=0.3;goal.el=.2;goal.d=5.0;}
+  else if(mode==='curl'){goal.t.set(C_POS.x,1.3,C_POS.z);goal.az=ROTY+((S&&S.side==='L')?0.9:-0.9);goal.el=.18;goal.d=4.6;}
+  else if(mode==='toss'){goal.t.set(C_POS.x+tossDir.x*1.4,0.9,C_POS.z+tossDir.z*1.4);goal.az=ROTY-1.25;goal.el=.33;goal.d=6.2;}
+  else if(mode==='summary'){goal.t.set(0,1.4,0.9);goal.az=0;goal.el=.16;goal.d=5.4;}
+  else if(mode==='podium'){goal.t.set(pod.position.x+0.2,1.6,pod.position.z);goal.az=0.35;goal.el=.2;goal.d=6.8;}
+ }
+ const canvas=renderer.domElement;
+ canvas.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;try{canvas.setPointerCapture(e.pointerId);}catch(_){}});
+ canvas.addEventListener('pointermove',e=>{if(!dragging)return;dragAz-=(e.clientX-lastX)*0.007;dragEl=clamp(dragEl+(e.clientY-lastY)*0.004,-0.15,0.5);lastX=e.clientX;lastY=e.clientY;idleDrag=0;const h=$('dragHint');if(h)h.hidden=true;});
+ const endDrag=()=>{dragging=false;};canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);
+
+ let W=1,H=1;
+ function resize(){const r=host.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);renderer.setSize(W,H,false);camera.aspect=W/H;
+  const dock=$('dock');const dr=dock.getBoundingClientRect();const docked=getComputedStyle(dock).position==='absolute';
+  if(docked){const shift=(dr.right-r.left)/2;camera.setViewOffset(W,H,-shift,0,W,H);}else camera.clearViewOffset();
+  camera.updateProjectionMatrix();}
+ if(window.ResizeObserver)new ResizeObserver(resize).observe(host);window.addEventListener('resize',resize);resize();
+
+ const tmpV=new THREE.Vector3(),tmpV2=new THREE.Vector3(),camRight=new THREE.Vector3();
+ const lblH=$('lblHeart'),lblO=$('lblO2');
+ function project(el,v){tmpV2.copy(v).project(camera);if(tmpV2.z>1){el.style.opacity='0';return;}el.style.opacity='1';
+  const x=(tmpV2.x*.5+.5)*W,y=(-tmpV2.y*.5+.5)*H;el.style.transform='translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px) translate(-50%,-50%)';}
+ let beatPh=0;
+ function angLerp(a,b,k){let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return a+d*k;}
+
+ function frame(dt){
+  const t=T;
+  if(!RM)clouds.rotation.y+=dt*0.01;
+  // player per-mode motion
+  const pl=player;
+  if(S&&(mode==='walk'||mode==='bike'||mode==='curl'||mode==='toss')){
+   if(mode==='walk'){const R=5.9,a=S.trackAng;pl.root.position.set(Math.cos(a)*R,0.07,Math.sin(a)*R);pl.root.rotation.y=Math.atan2(Math.sin(a),-Math.cos(a));
+    pl.phase=S.phase;pl.m=S.m;pl.jog=clamp((S.cad-110)/20,0,1);pl.state=S.still?'still':(S.m<0.15?'rest':'run');}
+   else if(mode==='bike'){pl.crank=S.crank;pl.state=S.m<0.15?'bikeRest':'bike';crank.rotation.z=-S.crank;wheels.forEach(w=>w.rotation.z=-S.crank*2.2);}
+   else if(mode==='curl'){pl.side=S.side;pl.curl=clamp(S.pitchF,0,2.4);pl.state=S.still?'still':(S.hold&&S.m<0.2?'rest':'curl');}
+   else if(mode==='toss'){pl.side=S.side;pl.curl=clamp(S.pitchF,0,2.4);pl.state='curl';}
+  }
+  Object.values(avs).forEach(a=>{if(a.root.visible)pose(a,t);});
+  // band glow pulse at heart rate
+  const hr=S?S.hr:72;beatPh+=dt*hr/60;const fr=beatPh%1;const pulse=Math.exp(-fr*7);
+  bandMat.emissiveIntensity=0.45+0.6*pulse;bandGlow.scale.setScalar((0.6+0.35*pulse)*(band.scale.x));bandGlow.material.opacity=0.55+0.45*pulse;
+  // balloon + bubble
+  camera.updateMatrixWorld();camRight.setFromMatrixColumn(camera.matrixWorld,0).setY(0).normalize();
+  if(balloon.visible&&S){pl.p.head.getWorldPosition(tmpV);const bob=RM?0:Math.sin(t*1.3)*0.06;
+   balloon.position.copy(tmpV).addScaledVector(camRight,0.95).add(V(0,1.05+bob,0));const k=0.0075*(1+0.13*pulse*(RM?0.4:1));heart.scale.set(k,k,k);
+   balloon.quaternion.copy(camera.quaternion);
+   const over=S.hr>S.prof.zone[1];heartMat.emissive.setHex(over?0xff5a00:0x550010);heartMat.emissiveIntensity=over?0.35+0.5*pulse:0.35;
+   bubble.position.copy(tmpV).addScaledVector(camRight,-0.85).add(V(0,0.75-bob,0));const low=S.spo2<92;
+   bubMat.color.setHex(low?0xffb020:0x8fe0ff);const bs=0.55+clamp((S.spo2-84)/14,0,1)*0.55;bubble.scale.setScalar(bs);o2tag.position.set(0,0,0.32);
+   const sp=str1.geometry.attributes.position;sp.setXYZ(0,balloon.position.x,balloon.position.y-0.5,balloon.position.z);sp.setXYZ(1,tmpV.x,tmpV.y+0.3,tmpV.z);sp.needsUpdate=true;
+   const sp2=str2.geometry.attributes.position;sp2.setXYZ(0,bubble.position.x,bubble.position.y-0.3*bs,bubble.position.z);sp2.setXYZ(1,tmpV.x,tmpV.y+0.25,tmpV.z);sp2.needsUpdate=true;
+  }
+  // ring held at hand
+  if(held){pl.p['hand'+pl.side].getWorldPosition(tmpV);held.position.copy(tmpV).add(V(0,0.12,0));held.rotation.set(Math.PI/2,0,0);}
+  for(let i=rings.length-1;i>=0;i--){const r=rings[i],m=r.m;r.t+=dt;
+   if(r.st==='fly'){r.vel.y+=-6*dt;m.position.addScaledVector(r.vel,dt);m.rotation.set(Math.PI/2+Math.sin(r.t*9)*0.25,0,r.t*6);
+    if(r.peg>=0&&r.t>=r.Tf){const pw=pegWorld[r.peg];m.position.set(pw.x,0.88,pw.z);r.st='slide';r.ty=0.26+pegCount[r.peg]*0.08;pegCount[r.peg]++;r.t=0;r.onLand&&r.onLand(true);}
+    else if(r.peg<0&&m.position.y<=0.12&&r.vel.y<0){m.position.y=0.12;if(r.b===0){r.onLand&&r.onLand(false);}r.b++;r.vel.y=-r.vel.y*0.42;r.vel.x*=0.55;r.vel.z*=0.55;if(r.b>=3||Math.abs(r.vel.y)<0.5){r.st='rest';r.t=0;m.rotation.set(Math.PI/2,0,0);}}}
+   else if(r.st==='slide'){m.position.y+=(r.ty-m.position.y)*(1-Math.exp(-dt*9));const w=Math.exp(-r.t*4)*0.4;m.rotation.set(Math.PI/2+Math.sin(r.t*14)*w,0,0);}
+   else if(r.st==='rest'){if(r.t>1.6){m.material.opacity=Math.max(0,1-(r.t-1.6)/0.6);if(r.t>2.2){scene.remove(m);m.material.dispose();rings.splice(i,1);}}}
+  }
+  for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=dt;p.s.position.y+=dt*(RM?0:0.75);p.s.material.opacity=1-Math.max(0,(p.t-1.0)/0.6);if(p.t>1.6){scene.remove(p.s);p.s.material.map.dispose();p.s.material.dispose();pops.splice(i,1);}}
+  for(let i=cheers.length-1;i>=0;i--){const c=cheers[i];c.t+=dt;if(c.t<0){c.h.visible=false;continue;}c.h.visible=true;c.h.position.y+=dt*0.9;c.h.rotation.y+=dt*2;c.h.material.opacity=1-c.t/1.6;if(c.t>1.6){scene.remove(c.h);c.h.material.dispose();cheers.splice(i,1);}}
+  if(conf.visible){conf.children.forEach(m=>{m.position.y-=m.userData.v*dt;m.rotation.x+=m.userData.s*dt;m.rotation.y+=m.userData.s*0.7*dt;if(m.position.y<0.1)respawnConf(m,true);});}
+  // camera
+  setGoal();
+  if(!dragging){idleDrag+=dt;if(idleDrag>5){dragAz*=Math.exp(-dt*0.4);dragEl*=Math.exp(-dt*0.4);}}
+  const k=1-Math.exp(-dt*2.4);cam.t.lerp(goal.t,k);cam.az=angLerp(cam.az,goal.az,k);cam.el+= (goal.el-cam.el)*k;cam.d+=(goal.d-cam.d)*k;
+  const orbit=RM?0:Math.sin(t*0.13)*0.26;const az=cam.az+orbit+dragAz,el=clamp(cam.el+dragEl,0.04,1.1);
+  camera.position.set(cam.t.x+cam.d*Math.cos(el)*Math.sin(az),cam.t.y+cam.d*Math.sin(el),cam.t.z+cam.d*Math.cos(el)*Math.cos(az));camera.lookAt(cam.t);
+  // projected labels
+  if(balloon.visible&&S){lblH.hidden=false;lblO.hidden=false;project(lblH,tmpV.copy(balloon.position).addScaledVector(camRight,0.62));project(lblO,tmpV.copy(bubble.position).add(V(0,-0.48,0)));}
+  else{lblH.hidden=true;lblO.hidden=true;}
+  renderer.render(scene,camera);
+ }
+ function popAtPlayer(text,color){const v=new THREE.Vector3();player.p.head.getWorldPosition(v);v.y+=0.6;v.addScaledVector(camRight,rnd(-0.3,0.3));popup(text,color,v);}
+ function popAtPeg(i,text,color){const v=pegWorld[i].clone();v.y=1.5;popup(text,color,v);}
+ function popAtDist(d,text,color){const v=new THREE.Vector3(C_POS.x,0.9,C_POS.z).addScaledVector(tossDir,d);popup(text,color,v);}
+ function redrawFonts(){redrawList.forEach(s=>{drawText(s.userData.canvas,s.userData.text,s.userData.opts);s.material.map.needsUpdate=true;});podFaces.forEach(f=>f());}
+ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(redrawFonts).catch(()=>{});
+ setMode('lobby');
+ return {frame,setMode,showPodium,popAtPlayer,popAtPeg,popAtDist,holdRing,throwRing,clearRings,cheerAt,resize,arrange,get mode(){return mode;}};
+}
+
+try{G=initGL();}catch(e){G=null;}
+if(!G){$('fallback').hidden=false;$('gl').hidden=true;$('dragHint').hidden=true;}
+
+/* ================= UI ================= */
+function avatarSVG(look,size){const s=size||56;
+ return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 56 56" aria-hidden="true"><ellipse cx="28" cy="53" rx="16" ry="3" fill="#cfe1f0"/><rect x="15" y="30" width="26" height="24" rx="13" fill="'+hex(look.shirt)+'"/><circle cx="28" cy="22" r="15" fill="'+hex(look.skin)+'"/><path d="M13 21a15 15 0 0 1 30 0c-4-5-9-7-15-7s-11 2-15 7z" fill="'+hex(look.hair)+'" stroke="#00000018"/>'+(look.style==='bun'?'<circle cx="28" cy="6" r="5" fill="'+hex(look.hair)+'"/>':'')+'<circle cx="23" cy="23" r="2" fill="#1a2230"/><circle cx="33" cy="23" r="2" fill="#1a2230"/><path d="M23 28q5 4 10 0" stroke="#1a2230" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';}
+function bandSVG(w){const leg=w!=='curl';
+ return '<svg width="56" height="72" viewBox="0 0 56 72" aria-hidden="true"><circle cx="28" cy="11" r="9" fill="#ffd9bd"/><rect x="18" y="21" width="20" height="26" rx="10" fill="#9ccaf2"/>'+
+ '<path d="M19 27l-7 15M37 27l'+(w==='curl'?'4 7 -6 -6':'7 15')+'" stroke="#9ccaf2" stroke-width="6" stroke-linecap="round" fill="none"/>'+
+ '<path d="M23 46l-3 22M33 46l'+(w==='bike'?'7 9 -3 13':'3 22')+'" stroke="#7aa9d6" stroke-width="7" stroke-linecap="round" fill="none"/>'+
+ (leg?'<rect x="'+(w==='bike'?36:31)+'" y="'+(w==='bike'?58:60)+'" width="12" height="7" rx="3.5" fill="#22b8ff" stroke="#0f56a8" stroke-width="1.5"/><circle cx="'+(w==='bike'?42:37)+'" cy="'+(w==='bike'?61.5:63.5)+'" r="9" fill="#22b8ff" opacity=".22"/>':
+ '<rect x="36" y="29" width="11" height="7" rx="3.5" fill="#22b8ff" stroke="#0f56a8" stroke-width="1.5"/><circle cx="41.5" cy="32.5" r="9" fill="#22b8ff" opacity=".22"/>')+'</svg>';}
+
+function buildPlayers(){const el=$('plist');el.innerHTML='';
+ PROFILES.forEach(p=>{const b=document.createElement('button');b.className='pcard';b.type='button';b.setAttribute('aria-pressed',String(p.id===App.profile.id));
+  b.innerHTML=avatarSVG(p.look)+'<span class="pmeta"><strong>'+p.full+', '+p.age+'</strong><span>'+p.program+'</span><span>'+(p.group==='plaza'?'Tuesday plaza group':'At-home grads')+' · heart zone '+p.zone[0]+'–'+p.zone[1]+'</span></span>';
+  b.addEventListener('click',()=>{App.profile=p;sfx.tap();buildPlayers();if(G)G.setMode('lobby');updateFallback();});el.appendChild(b);});}
+function buildWorkouts(){const el=$('wlist');el.innerHTML='';const p=App.profile;
+ Object.keys(WK).forEach(w=>{const b=document.createElement('button');b.className='wcard';b.type='button';b.setAttribute('aria-pressed',String(w===App.workout));
+  b.innerHTML=bandSVG(w)+'<span class="pmeta"><strong>'+WK[w].name+'</strong><span>Band on your '+WK[w].band+' ('+WK[w].limb+')</span></span>';
+  b.addEventListener('click',()=>{App.workout=w;App.preview=null;sfx.tap();buildWorkouts();if(G)G.setMode('preview');updateFallback();});
+  b.addEventListener('mouseenter',()=>{App.preview=w;if(G)G.setMode('preview');});
+  b.addEventListener('mouseleave',()=>{App.preview=null;if(G)G.setMode('preview');});
+  el.appendChild(b);});
+ const w=App.workout;
+ $('doseBox').innerHTML='<span class="who">'+p.coach+' (your kinesiologist) set today\'s dose for '+p.name+'</span><strong>'+doseText(p,w)+'</strong><span>Keep your heart at '+p.zone[0]+'–'+p.zone[1]+' beats per minute. Stop and rest if your oxygen goes below 92%.</span>';
+ $('startBtn').textContent=WK[w].verb;}
+
+/* -------- navigation -------- */
+const SCREENS=['players','workout','session','toss','summary','podium'];
+function show(name){App.screen=name;SCREENS.forEach(s=>{$('scr-'+s).hidden=s!==name;});
+ document.querySelectorAll('.step').forEach(b=>{if(b.dataset.go===name)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');});
+ const cur=document.querySelector('.step[aria-current]');if(cur&&cur.scrollIntoView)try{cur.scrollIntoView({block:'nearest',inline:'nearest'});}catch(e){}
+ $('dock').scrollTop=0;if(G)G.resize();updateFallback();}
+function go(name){
+ if(TS&&name!=='toss'){TS.holding=false;TS.auto=false;}
+ if(name==='players'){endSession(false);buildPlayers();show('players');if(G)G.setMode('lobby');}
+ else if(name==='workout'){endSession(false);buildWorkouts();show('workout');if(G)G.setMode('preview');}
+ else if(name==='session'){if(!S||S.finished)startSession(App.workout);else{show('session');if(G)G.setMode(S.w);}}
+ else if(name==='toss'){if(!S||S.finished)startSession('curl',true);startToss();}
+ else if(name==='summary'){if(!S){startSession(App.workout,true);fastFill();}finishSession();}
+ else if(name==='podium'){if(S&&!S.finished)finishSession(true);showBoard();}
+}
+document.querySelectorAll('.step').forEach(b=>b.addEventListener('click',()=>{sfx.tap();go(b.dataset.go);}));
+$('toWorkout').addEventListener('click',()=>{sfx.tap();go('workout');});
+$('startBtn').addEventListener('click',()=>{sfx.chime();startSession(App.workout);});
+
+/* ================= SESSION SIM ================= */
+function startSession(w,quiet){
+ const p=App.profile;const d=p.dose[w];App.workout=w;
+ S={w,prof:p,target:w==='curl'?d.reps:d.min*60,progress:0,actT:0,rt:0,paused:false,hold:false,still:false,stillT:0,alert:null,finished:false,
+  hr:p.rest+4,spo2:p.spo2,minSpo2:100,hrSum:0,hrN:0,zoneT:0,highT:0,zoneAcc:0,hiHold:0,points:0,steps:0,revs:0,reps:{L:0,R:0},
+  cad:w==='walk'?d.cad[0]-6:0,rpm:w==='bike'?d.rpm[0]-5:0,phase:0,crank:0,trackAng:0,m:0,curlP:0.95,curlPeriod:3,nomT:3,rom:2.0,pitchF:0,
+  side:'R',lastRep:null,qSum:0,qN:0,ev:{spike:0,dip:0},ms:{},log:[],tookBreak:false,overdoWarned:false,tossHits:0,tossPlayed:false,
+  buf:[],sAcc:0,counted:false};
+ newRep();
+ if(!quiet||App.screen!=='toss'){show('session');}
+ setupSessionUI();
+ if(G)G.setMode(w);
+}
+function setupSessionUI(){const p=S.prof,w=S.w;
+ $('h-session').textContent=p.name+' · '+WK[w].short;$('sesEyebrow').textContent='Step 3 of 6 · live session';
+ $('bandChip').textContent='Band on '+(w==='curl'?(S.side==='R'?'right':'left')+' wrist':WK[w].band);
+ $('hrZone').textContent='Your zone '+p.zone[0]+'–'+p.zone[1];
+ $('curlRow').hidden=w!=='curl';$('pauseBtn').textContent='Pause';
+ $('sideBtn').textContent=S.side==='R'?'Switch to left arm':'Switch to right arm';
+ if(w==='walk'){$('m1Lbl').textContent='Cadence';$('m2Lbl').textContent='Steadiness';}
+ else if(w==='bike'){$('m1Lbl').textContent='Pedal speed';$('m2Lbl').textContent='Smoothness';}
+ else{$('m1Lbl').textContent='Curls';$('m2Lbl').textContent='Last curl';}
+ $('speedChip').textContent='Demo time ×'+App.speed;}
+function endSession(){if(S&&!S.finished){S.finished=true;}closeAlert(true);S=null;TS=null;}
+function newRep(){const fast=Math.random()<0.12;S.nomT=fast?rnd(1.4,1.9):rnd(2.5,3.7);S.curlPeriod=S.nomT/Math.sqrt(App.speed);S.rom=fast?rnd(1.45,1.75):rnd(1.9,2.25);}
+function curlAngle(p){const R=S.rom;if(p<0.4)return R*ease(p/0.4);if(p<0.5)return R;if(p<0.9)return R*(1-ease((p-0.5)/0.4));return 0;}
+function completeRep(fromToss){
+ S.reps[S.side]++;if(S.w==='curl')S.progress=S.reps.L+S.reps.R;
+ if(fromToss)return;
+ const good=S.nomT>=2.2&&S.rom>=1.8;S.lastRep={t:S.nomT,rom:Math.round(S.rom*57.3),good};
+ if(good){S.points+=10;S.qSum+=rnd(86,97);G&&G.popAtPlayer('+10 smooth','#1f7ae0');}else{S.points+=2;S.qSum+=rnd(55,68);G&&G.popAtPlayer('Slower, please','#c98f00');}
+ S.qN++;sfx.rep();newRep();}
+function zone(){return S.prof.zone;}
+function genSample(){const m=S.m;let x,y,z;
+ if(S.still)return [0.015*noise(),0.015*noise(),1+0.01*noise()];
+ if(App.screen==='toss'||S.w==='curl'){const a=App.screen==='toss'?tossArm():curlAngle(S.curlP)*m;x=Math.sin(a)+0.04*noise();y=0.04*noise();z=Math.cos(a)+0.04*noise();}
+ else if(S.w==='walk'){const p=S.phase;x=(0.55*Math.sin(p)+0.15*Math.sin(2*p+0.7))*m+0.05*noise();y=0.12*Math.sin(p+1)*m+0.04*noise();z=1+(0.38*Math.abs(Math.sin(p))-0.24+0.12*Math.sin(4*p))*m+0.05*noise();}
+ else{const c=S.crank;x=0.42*Math.sin(c)*m+0.03*noise();y=0.06*Math.sin(2*c)*m+0.03*noise();z=1+(0.28*Math.cos(c)-0.1)*m+0.03*noise();}
+ return [x,y,z];}
+function simTick(dt){
+ if(!S||S.finished)return;
+ const p=S.prof,z=p.zone,inToss=App.screen==='toss',sp=App.speed,simDt=dt*sp,d=p.dose[S.w];
+ S.rt+=dt;
+ const moving=!S.paused&&!S.hold&&!S.still&&!inToss;
+ if(S.ev.spike>0)S.ev.spike-=dt*(S.hold?1.6:1);
+ if(S.ev.dip>0)S.ev.dip-=dt*(S.hold?1.5:1);
+ S.m+=((moving?1:0)-S.m)*(1-Math.exp(-dt*2.5));
+ const slow=S.hr>z[1];
+ if(S.w==='walk'){const tg=(d.cad[0]+d.cad[1])/2+4*Math.sin(S.rt*0.07)-(slow?12:0);S.cad+=(tg-S.cad)*(1-Math.exp(-dt*0.8));}
+ if(S.w==='bike'){const tg=(d.rpm[0]+d.rpm[1])/2+3*Math.sin(S.rt*0.09)-(slow?8:0);S.rpm+=(tg-S.rpm)*(1-Math.exp(-dt*0.8));}
+ // heart + oxygen
+ const mid=z[0]+(z[1]-z[0])*0.55,warm=clamp(S.actT/120,0,1);
+ let hrT=(moving||inToss)?p.rest+(mid-p.rest)*(0.35+0.65*warm)+3*Math.sin(S.rt*0.11):p.rest+14;
+ if(inToss)hrT=p.rest+(mid-p.rest)*0.8;
+ if(S.ev.spike>0)hrT+=S.hold?18:46;
+ S.hr+=(hrT-S.hr)*(1-Math.exp(-dt/2.6))+noise()*0.25;
+ let o2T=p.spo2+0.6*Math.sin(S.rt*0.05);if(S.ev.dip>0)o2T=S.ev.dip>6?88.3:95.6;
+ S.spo2=clamp(S.spo2+(o2T-S.spo2)*(1-Math.exp(-dt/2.2))+noise()*0.04,80,100);
+ S.minSpo2=Math.min(S.minSpo2,S.spo2);S.hrSum+=S.hr*dt;S.hrN+=dt;
+ // motion
+ if(S.w==='walk'){S.phase+=Math.PI*S.cad/60*dt*S.m;S.trackAng-=S.cad/60*0.55*S.m*dt/5.9;}
+ if(S.w==='bike'){S.crank+=2*Math.PI*S.rpm/60*dt*S.m;}
+ if(S.w==='curl'&&!inToss){if(moving||S.curlP<0.9){const prev=S.curlP;S.curlP+=dt/S.curlPeriod*(moving?1:2);if(S.curlP>=1){S.curlP=0;if(moving)completeRep();else{S.curlP=0.95;}}if(prev<0.9&&S.curlP>=0.9&&!moving)S.curlP=0.95;}}
+ // samples 50 Hz
+ S.sAcc+=dt*50;while(S.sAcc>=1){S.sAcc-=1;const s=genSample();S.buf.push(s);if(S.buf.length>150)S.buf.shift();const pit=Math.atan2(s[0],s[2]);S.pitchF+=(pit-S.pitchF)*0.55;}
+ // dose + stats
+ if(moving&&S.m>0.5){S.actT+=simDt;
+  if(S.w==='walk'){S.progress+=simDt;S.steps+=S.cad/60*simDt;S.qSum+=(slow?84:93)+noise()*2;S.qN++;}
+  if(S.w==='bike'){S.progress+=simDt;S.revs+=S.rpm/60*simDt;S.qSum+=(slow?83:91)+noise()*2;S.qN++;}
+  if(S.hr>=z[0]&&S.hr<=z[1]){S.zoneT+=simDt;S.zoneAcc+=simDt;if(S.zoneAcc>=20){S.zoneAcc=0;S.points+=5;G&&G.popAtPlayer('+5 in your zone','#137a3f');}}
+  else if(S.hr>z[1])S.highT+=simDt;}
+ // milestones
+ const q=S.progress/S.target;
+ [0.25,0.5,0.75,1].forEach(mm=>{if(q>=mm&&!S.ms[mm]){S.ms[mm]=1;S.points+=25;
+  if(mm<1){G&&G.popAtPlayer(Math.round(mm*100)+'% done! +25','#c98f00');sfx.chime();}
+  else{G&&G.popAtPlayer('Dose complete! +25','#137a3f');sfx.fanfare();toast('Today\'s dose is done. Cool down gently, then tap Finish.');}}});
+ // safety
+ if(S.still){S.stillT+=dt;if(S.stillT>2.2&&!S.alert)openAlert('still');}
+ if(!S.alert){
+  if(S.spo2<92)openAlert('spo2');
+  else if(S.hr>z[1]+15){S.hiHold+=dt;if(S.hiHold>1.5)openAlert('hr');}
+  else{S.hiHold=0;if(S.progress>=S.target*1.15&&!S.overdoWarned&&!inToss)openAlert('overdo');}
+ }
+ if(S.alert)updateAlert();
+}
+function fastFill(){const p=S.prof,z=p.zone;S.progress=S.target;S.actT=S.w==='curl'?S.target*3:S.target;S.zoneT=S.actT*0.82;S.highT=S.actT*0.04;
+ S.hrSum=(z[0]+z[1])/2*100;S.hrN=100;S.minSpo2=p.spo2-1;S.points=240;S.qSum=90;S.qN=1;S.steps=S.w==='walk'?S.target/60*108:0;S.revs=S.w==='bike'?S.target/60*60:0;
+ if(S.w==='curl'){S.reps.R=S.target;}[0.25,0.5,0.75,1].forEach(m=>S.ms[m]=1);}
+
+/* -------- HUD -------- */
+let hudAcc=0;
+function hudTick(dt){
+ if(!S||S.finished)return;hudAcc+=dt;
+ const scr=App.screen;
+ if(scr==='session')drawSpark($('spark'));
+ if(hudAcc<0.12)return;hudAcc=0;
+ const p=S.prof,z=p.zone,hr=Math.round(S.hr),o2=Math.round(S.spo2);
+ // projected labels
+ const lh=$('lblHeart'),lo=$('lblO2');lh.innerHTML=hr+'<small>bpm</small>';lo.innerHTML=o2+'<small>% O₂</small>';
+ lh.className='tag3d'+(hr>z[1]+15?' bad':hr>z[1]?' warn':'');lo.className='tag3d'+(o2<92?' bad':'');
+ if(scr==='toss'){$('tHr').textContent='Heart '+hr+' bpm';$('tO2').textContent='Oxygen '+o2+'%';return;}
+ if(scr!=='session')return;
+ $('hrVal').textContent=hr;$('o2Val').textContent=o2;
+ const hrState=hr>z[1]+15?'bad':hr>z[1]?'warn':hr>=z[0]?'good':'';
+ $('hrTile').className='tile'+(hrState?' is-'+hrState:'');
+ $('hrPill').textContent=hrState==='bad'?'Too high: stop':hrState==='warn'?'Above your zone':hrState==='good'?'In your zone':'Warming up';
+ const o2State=o2<92?'bad':o2<95?'':'good';$('o2Tile').className='tile'+(o2State?' is-'+o2State:'');
+ $('o2Pill').textContent=o2<92?'Low: rest now':o2<95?'Okay':'Good';
+ const pct=S.progress/S.target;$('dosePct').textContent=Math.round(pct*100)+'%';
+ $('doseFill').style.width=Math.min(100,pct*100)+'%';$('doseFill').classList.toggle('over',pct>1.05);
+ const tS=S.w==='curl'?S.actT:S.progress;
+ if(S.w==='curl'){$('doseLbl').textContent=S.progress+' of '+S.target+' curls';$('clockChip').textContent=fmt(S.actT)+' active';}
+ else{$('doseLbl').textContent=fmt(S.progress)+' of '+fmt(S.target)+' minutes';$('clockChip').textContent=Math.floor(S.progress/60)+' of '+(S.target/60)+' min';}
+ const d=p.dose[S.w];
+ if(S.w==='walk'){$('m1Val').innerHTML=Math.round(S.cad*S.m)+'<small>steps/min</small>';$('m1Sub').textContent='Target '+d.cad[0]+'–'+d.cad[1]+' · '+Math.round(S.steps)+' steps';
+  $('m2Val').innerHTML=(S.qN?Math.round(S.qSum/S.qN):'--')+'<small>%</small>';$('m2Sub').textContent='Stride regularity';}
+ else if(S.w==='bike'){$('m1Val').innerHTML=Math.round(S.rpm*S.m)+'<small>RPM</small>';$('m1Sub').textContent='Target '+d.rpm[0]+'–'+d.rpm[1]+' · '+Math.round(S.revs)+' turns';
+  $('m2Val').innerHTML=(S.qN?Math.round(S.qSum/S.qN):'--')+'<small>%</small>';$('m2Sub').textContent='Even pedal strokes';}
+ else{$('m1Val').innerHTML=S.progress+'<small>of '+S.target+'</small>';$('m1Sub').textContent='Right '+S.reps.R+' · Left '+S.reps.L+' · '+d.kg+' kg';
+  const lr=S.lastRep;$('m2Val').innerHTML=lr?lr.t.toFixed(1)+'<small>s · '+lr.rom+'°</small>':'--';$('m2Sub').textContent=lr?(lr.good?'Smooth and full range':'A bit quick'):'Time and range of motion';}
+ $('pts').textContent=S.points;
+ const s=S.buf[S.buf.length-1];if(s)$('rawLine').textContent='x '+s[0].toFixed(2)+'  y '+s[1].toFixed(2)+'  z '+s[2].toFixed(2)+(S.w==='curl'?'  pitch '+Math.round(S.pitchF*57.3)+'°':'');
+ // coach
+ let msg,cls='';
+ if(S.still){msg='No movement from the band. Are you okay?';cls='bad';}
+ else if(S.alert==='spo2'||o2<92){msg='Oxygen is low. Sit down and breathe slowly.';cls='bad';}
+ else if(hrState==='bad'){msg='Your heart is well above your zone. Stop and rest.';cls='bad';}
+ else if(S.paused){msg='Paused. Tap Resume when you are ready.';cls='info';}
+ else if(hrState==='warn'){msg='Ease off a little. Your heart is above your zone.';cls='warn';}
+ else if(pct>=1.15){msg='You are past today\'s dose. Time to finish.';cls='warn';}
+ else if(pct>=1){msg='Dose done! Cool down gently, then tap Finish.';}
+ else if(S.w==='curl'&&S.lastRep&&!S.lastRep.good){msg='Slow it down: lift for 2 seconds, lower for 2.';cls='warn';}
+ else if(hrState==='good'){msg=S.w==='curl'?'Slow and smooth. Nice full range.':S.w==='bike'?'Lovely even pedalling. You are in your zone.':'Nice and steady. You are in your zone.';}
+ else{msg='Easy pace to warm up. Your heart will rise slowly.';cls='info';}
+ $('coachTxt').textContent=msg;$('coach').className='coach'+(cls?' '+cls:'');
+}
+function drawSpark(cv){if(!cv||!S)return;const dpr=Math.min(2,window.devicePixelRatio||1);const w=cv.clientWidth,h=cv.clientHeight;if(!w)return;
+ if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+ const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);
+ const yOf=v=>h-((v+1)/3)*h;x.strokeStyle='rgba(255,255,255,.12)';x.lineWidth=1;[ -1,0,1,2].forEach(g=>{x.beginPath();x.moveTo(0,yOf(g));x.lineTo(w,yOf(g));x.stroke();});
+ x.fillStyle='rgba(207,228,247,.5)';x.font='500 10px "IBM Plex Mono",monospace';x.fillText('1g',2,yOf(1)-2);x.fillText('0',2,yOf(0)-2);
+ const b=S.buf,n=150;['#ff7a70','#45d18b','#6fb3ff'].forEach((c,k)=>{x.strokeStyle=c;x.lineWidth=2;x.beginPath();for(let i=0;i<b.length;i++){const px=(i+n-b.length)/(n-1)*w,py=yOf(clamp(b[i][k],-1,2));i?x.lineTo(px,py):x.moveTo(px,py);}x.stroke();
+  if(b.length){const l=b[b.length-1];x.fillStyle=c;x.beginPath();x.arc(w-3,yOf(clamp(l[k],-1,2)),3,0,7);x.fill();}});}
+
+/* session buttons */
+$('pauseBtn').addEventListener('click',()=>{if(!S)return;S.paused=!S.paused;$('pauseBtn').textContent=S.paused?'Resume':'Pause';sfx.tap();});
+$('finishBtn').addEventListener('click',()=>{sfx.chime();finishSession();});
+$('tossBtn').addEventListener('click',()=>{sfx.tap();go('toss');});
+$('repBtn').addEventListener('click',manualRep);
+$('sideBtn').addEventListener('click',()=>{if(!S)return;S.side=S.side==='R'?'L':'R';setupSessionUI();if(G)G.arrange();toast('Band moved to your '+(S.side==='R'?'right':'left')+' wrist');sfx.tap();});
+function manualRep(){if(!S||S.finished)return;if(S.w!=='curl'){toast('Reps are for curls. Start Curls in the demo controls.');return;}
+ if(S.curlP>=0.88||S.curlP<0.02){S.curlP=0;S.curlPeriod=S.nomT/Math.sqrt(App.speed);}}
+
+/* ================= RING TOSS ================= */
+function startToss(){
+ if(!S)return;TS={rings:10,thrown:0,landed:0,hits:0,points:0,holding:false,holdT:0,post:9,armRel:0,cool:0,auto:false,autoTarget:0,done:false,lifts:[]};S.tossPlayed=true;
+ show('toss');if(G){G.setMode('toss');G.clearRings();G.holdRing();}
+ $('tossResult').hidden=true;$('tossAuto').setAttribute('aria-pressed','false');$('tossAuto').textContent='Auto-play (demo)';
+ const sc=v=>(v/3.2*100);[[0,'z1'],[1,'z2'],[2,'z3']].forEach(([i,id])=>{const hc=(PEG_D[i]-0.55)/1.0;const el=$(id);el.style.left=sc(hc-0.2)+'%';el.style.width=sc(0.4)+'%';});
+ renderToss();}
+function tossArm(){if(!TS)return 0;const R=2.2;if(TS.holding)return R*Math.min(1,TS.holdT/2.45);if(TS.post<0.15)return TS.armRel+(R-TS.armRel)*(TS.post/0.15);return R*Math.max(0,1-(TS.post-0.15)/0.6);}
+function holdStart(){if(!TS||TS.done||TS.holding||TS.cool>0||TS.thrown>=TS.rings)return;TS.holding=true;TS.holdT=0;$('holdBtn').classList.add('on');$('holdBtn').textContent='Lifting… let go to throw';if(G)G.holdRing();}
+function holdEnd(){if(!TS||!TS.holding)return;TS.holding=false;$('holdBtn').classList.remove('on');$('holdBtn').textContent='Hold to lift';release(TS.holdT);}
+function release(h){const dist=holdToDist(h);let peg=-1;PEG_D.forEach((pd,i)=>{if(Math.abs(dist-pd)<=0.2)peg=i;});
+ TS.armRel=tossArm();TS.post=0;TS.cool=1.0;TS.thrown++;TS.lifts.push(h);if(S){completeRep(true);}
+ const land=hit=>{TS.landed++;if(hit){TS.hits++;const pts=PEG_PTS[peg];TS.points+=pts;sfx.plink();G&&G.popAtPeg(peg,'+'+pts,'#137a3f');}
+  else{sfx.miss();G&&G.popAtDist(Math.min(dist,3.4),h<0.65?'Lift slower':h>2.45?'A bit too slow':'So close!','#c98f00');}
+  renderToss();if(TS.landed>=TS.rings)finishToss();};
+ if(G)G.throwRing(dist,peg,land);else setTimeout(()=>land(peg>=0),900);
+ renderToss();}
+function renderToss(){if(!TS)return;$('tLeft').textContent=TS.rings-TS.thrown;$('tHits').textContent=TS.hits;$('tPts').textContent=TS.points;
+ const rr=$('ringRow');const cols=['#ff5d73','#ffc531','#37b6ff','#4fcf70','#a077ff'];rr.innerHTML='';for(let i=0;i<TS.rings;i++){const e=document.createElement('i');e.style.setProperty('--c',cols[i%5]);if(i<TS.thrown)e.className='used';rr.appendChild(e);}}
+function finishToss(){TS.done=true;TS.auto=false;$('tossAuto').setAttribute('aria-pressed','false');$('tossAuto').textContent='Auto-play (demo)';
+ if(S){S.points+=TS.points;S.tossHits=Math.max(S.tossHits,TS.hits);}
+ const avg=TS.lifts.reduce((a,b)=>a+b,0)/TS.lifts.length;
+ $('trTitle').textContent=TS.hits>=7?'Ring Toss champion!':TS.hits>=4?'Nice tossing!':'Good practice!';
+ $('trBody').textContent=TS.hits+' of '+TS.rings+' rings landed on a peg for '+TS.points+' points. Your average lift took '+avg.toFixed(1)+' seconds'+(avg>=1.3?', nice and controlled.':'. Try lifting a little slower.')+(S&&S.w==='curl'?' Every throw counted as a curl.':'');
+ $('tossResult').hidden=false;sfx.fanfare();}
+function tossTick(dt){if(!TS||App.screen!=='toss')return;
+ if(TS.cool>0)TS.cool-=dt;TS.post+=dt;
+ if(TS.holding){TS.holdT+=dt;if(TS.holdT>=3.2)holdEnd();}
+ if(TS.auto&&!TS.holding&&TS.cool<=0&&TS.thrown<TS.rings&&!TS.done){TS.autoTarget=[0.85,1.55,2.25][Math.floor(Math.random()*3)]+rnd(-0.26,0.22);holdStart();}
+ if(TS.auto&&TS.holding&&TS.holdT>=TS.autoTarget)holdEnd();
+ const h=TS.holding?TS.holdT:(TS.lifts.length?TS.lifts[TS.lifts.length-1]:0);
+ $('needle').style.left=clamp(h/3.2*100,0,100)+'%';$('liftT').textContent=h.toFixed(1)+' s';}
+const hb=$('holdBtn');
+hb.addEventListener('pointerdown',e=>{e.preventDefault();try{hb.setPointerCapture(e.pointerId);}catch(_){}holdStart();});
+['pointerup','pointercancel'].forEach(ev=>hb.addEventListener(ev,holdEnd));
+hb.addEventListener('contextmenu',e=>e.preventDefault());
+hb.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.repeat){e.preventDefault();holdStart();}});
+hb.addEventListener('keyup',e=>{if(e.key==='Enter'){e.preventDefault();holdEnd();}});
+$('tossAgain').addEventListener('click',()=>{sfx.tap();startToss();});
+const backFromToss=()=>{sfx.tap();if(TS){TS.auto=false;TS.holding=false;}show('session');setupSessionUI();if(G&&S)G.setMode(S.w);};
+$('tossDone').addEventListener('click',backFromToss);$('tossBack').addEventListener('click',backFromToss);
+$('tossAuto').addEventListener('click',()=>{if(!TS)return;if(TS.done)startToss();TS.auto=!TS.auto;$('tossAuto').setAttribute('aria-pressed',String(TS.auto));$('tossAuto').textContent=TS.auto?'Stop auto-play':'Auto-play (demo)';});
+
+/* ================= ALERTS ================= */
+const ICONS={
+ o2:'<svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="#bfeaff" stroke="#b8261c" stroke-width="3"/><text x="20" y="26" text-anchor="middle" font-family="Baloo 2,sans-serif" font-weight="800" font-size="15" fill="#b8261c">O₂</text></svg>',
+ heart:'<svg width="40" height="40" viewBox="0 0 40 40"><path d="M20 34S5 25 5 14c0-5 4-8 8-8 3 0 5 2 7 4 2-2 4-4 7-4 4 0 8 3 8 8 0 11-15 20-15 20z" fill="#ef4f43"/></svg>',
+ still:'<svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="#b8261c" stroke-width="3"/><text x="20" y="27" text-anchor="middle" font-family="Baloo 2,sans-serif" font-weight="800" font-size="20" fill="#b8261c">?</text></svg>',
+ dose:'<svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="#fff0c7" stroke="#c98f00" stroke-width="3"/><path d="M13 20l5 5 9-10" stroke="#8a5200" stroke-width="4" fill="none" stroke-linecap="round"/></svg>'};
+function abtn(label,cls,fn,id){const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;if(id)b.id=id;b.addEventListener('click',fn);return b;}
+function openAlert(kind){if(!S)return;S.alert=kind;if(kind!=='overdo')S.hold=true;S.log.push(kind);sfx.alert();
+ const p=S.prof,box=$('alertBox'),btns=$('alertBtns');btns.innerHTML='';box.className='alert'+(kind==='overdo'?' amber':'');
+ if(kind==='spo2'){$('alertIco').innerHTML=ICONS.o2;$('alertTitle').textContent='Time for a break';
+  $('alertBody').textContent='Your blood oxygen dropped below 92%. Stop, sit down and take slow, deep breaths. We\'ll tell you when it\'s back up. '+p.coach+' can see this alert too.';
+  btns.append(abtn('I\'m sitting down','white',()=>{S.tookBreak=true;S.resting=true;btns.firstChild.disabled=true;btns.firstChild.textContent='Resting…';}),abtn('Back to exercise','green',closeAlert,'alertGo'));}
+ else if(kind==='hr'){$('alertIco').innerHTML=ICONS.heart;$('alertTitle').textContent='Slow down and rest';
+  $('alertBody').textContent='Your heart rate is well above your zone of '+p.zone[0]+'–'+p.zone[1]+'. Stop moving and let it come down before you carry on.';
+  btns.append(abtn('I\'m resting','white',()=>{S.tookBreak=true;btns.firstChild.disabled=true;btns.firstChild.textContent='Resting…';}),abtn('Back to exercise','green',closeAlert,'alertGo'));}
+ else if(kind==='still'){$('alertIco').innerHTML=ICONS.still;$('alertTitle').textContent='Are you okay?';
+  $('alertBody').textContent='Your band hasn\'t felt any movement for 30 seconds.';
+  btns.append(abtn('I\'m okay','green',()=>{S.still=false;closeAlert();}),abtn('Get my instructor','red',()=>{$('alertBody').textContent=p.coach+' has been alerted and is coming to check on you. Stay seated until they arrive.';btns.innerHTML='';btns.append(abtn('I\'m okay now','green',()=>{S.still=false;closeAlert();}));}));}
+ else if(kind==='overdo'){S.overdoWarned=true;$('alertIco').innerHTML=ICONS.dose;$('alertTitle').textContent='You\'ve done today\'s dose';
+  $('alertBody').textContent='You\'re past 115% of the dose '+p.coach+' set. Doing extra today won\'t help more and can tire you out. Cool down and finish.';
+  btns.append(abtn('Finish session','green',()=>{closeAlert();finishSession();}),abtn('Cool down 2 more minutes','white',closeAlert));}
+ $('alertWrap').hidden=false;updateAlert();const f=btns.querySelector('button');if(f)setTimeout(()=>{try{f.focus();}catch(e){}},50);}
+function updateAlert(){if(!S||!S.alert)return;const live=$('alertLive'),go=$('alertGo');
+ if(S.alert==='spo2'){const o=Math.round(S.spo2);const ok=S.spo2>=94;live.className='alert-live'+(ok?' ok':'');live.textContent='Oxygen now '+o+'%'+(ok?' · back to normal':' · keep resting');if(go)go.disabled=!ok;}
+ else if(S.alert==='hr'){const h=Math.round(S.hr);const ok=S.hr<=S.prof.zone[1];live.className='alert-live'+(ok?' ok':'');live.textContent='Heart now '+h+' bpm'+(ok?' · back in your zone':' · coming down');if(go)go.disabled=!ok;}
+ else if(S.alert==='still'){live.className='alert-live';live.textContent='Movement: none';}
+ else if(S.alert==='overdo'){live.className='alert-live amber';live.textContent='Dose '+Math.round(S.progress/S.target*100)+'%';}}
+function closeAlert(silent){$('alertWrap').hidden=true;if(S){S.alert=null;S.hold=false;S.resting=false;S.hiHold=0;}if(silent!==true)sfx.tap();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('alertWrap').hidden){/* keep alert until acknowledged */}});
+
+/* ================= SUMMARY ================= */
+function finishSession(silent){
+ if(!S)return;if(S.alert)closeAlert(true);
+ const wasFinished=S.finished;S.finished=true;TS=null;
+ const p=S.prof,pct=Math.round(100*S.progress/S.target);
+ if(!S.counted){S.counted=true;if(pct>=75){const b=BOARD[p.id];b.done=Math.min(b.of,b.done+1);b.streak+=1;}}
+ if(silent===true)return;
+ show('summary');if(G)G.setMode('summary');
+ const zonePct=Math.round(100*S.zoneT/Math.max(1,S.actT)),avgHR=S.hrN?Math.round(S.hrSum/S.hrN):p.rest,minO2=Math.round(Math.min(S.minSpo2,p.spo2+1));
+ const q=S.qN?Math.round(S.qSum/S.qN):90;
+ const stars=pct>=100?3:pct>=75?2:pct>=40?1:0;
+ $('h-sum').textContent=pct>=100?'Dose kept, '+p.name+'!':pct>=75?'Nearly there, '+p.name+'!':'Every bit counts, '+p.name;
+ $('sumArc').setAttribute('stroke-dashoffset',(339.3*(1-Math.min(1,pct/100))).toFixed(1));$('sumArc').setAttribute('stroke',pct>115?'#f0a500':'#22a95a');$('sumPct').textContent=pct+'%';
+ let st='';for(let i=0;i<3;i++)st+='<svg width="40" height="40" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2l3.3 6.8 7.4 1-5.4 5.2 1.3 7.4L13 18.9l-6.6 3.5 1.3-7.4L2.3 9.8l7.4-1z" fill="'+(i<stars?'#ffc531':'#e3ecf4')+'" stroke="'+(i<stars?'#c98f00':'#c9d8e6')+'" stroke-width="1.5"/></svg>';
+ $('stars').innerHTML=st+'<span class="sr" style="position:absolute;left:-9999px">'+stars+' of 3 stars</span>';
+ const amt=S.w==='walk'?Math.round(S.steps).toLocaleString()+' steps':S.w==='bike'?Math.round(S.revs).toLocaleString()+' pedal turns':S.progress+' curls';
+ $('sumDose').textContent='of today\'s dose · '+(S.w==='curl'?S.progress+' of '+S.target+' curls':Math.round(S.progress/60)+' of '+(S.target/60)+' minutes');
+ $('sumNote').textContent=pct>115?'You went past your dose. Next time, stop when you hear the dose-complete chime.':pct>=100?'Right on target. That\'s exactly what '+p.coach+' prescribed.':pct>=75?'Close to your full dose. '+p.coach+' will see how it went.':'You did part of today\'s dose. '+p.coach+' will see this and may adjust your plan.';
+ const tiles=[['Time in your zone',zonePct+'%',p.zone[0]+'–'+p.zone[1]+' bpm'],['Average heart',avgHR+' bpm','Highest zone time '+Math.round(100*S.highT/Math.max(1,S.actT))+'% above'],
+  ['Lowest oxygen',minO2+'%',minO2<92?'You rested when it dipped':'Stayed in a safe range'],[S.w==='curl'?'Curls':'Movement',amt,S.w==='curl'?'Right '+S.reps.R+' · Left '+S.reps.L:S.w==='walk'?'Band on ankle':'Band on shin'],
+  [S.w==='curl'?'Smooth curls':'Steadiness',q+'%',S.w==='curl'?'2–4 s per curl':'From the band\'s rhythm'],['Points',String(S.points),'Ring Toss '+(S.tossPlayed?S.tossHits+' rings on pegs':'not played')]];
+ $('sumGrid').innerHTML=tiles.map(t=>'<div class="stat"><span class="lbl">'+t[0]+'</span><b>'+t[1]+'</b><span class="sub">'+t[2]+'</span></div>').join('');
+ const stk=[];
+ if(pct>=100)stk.push(['Kept the dose','#22a95a','<path d="M7 13l4 4 8-9" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round"/>']);
+ if(zonePct>=70)stk.push(['Steady heart','#ef4f43','<path d="M13 21s-7-4.5-7-9.5C6 9 8 7.5 10 7.5c1.4 0 2.3.8 3 1.8.7-1 1.6-1.8 3-1.8 2 0 4 1.5 4 4 0 5-7 9.5-7 9.5z" fill="#fff"/>']);
+ if(S.tookBreak)stk.push(['Smart break','#1f7ae0','<rect x="8" y="7" width="3.5" height="12" rx="1.5" fill="#fff"/><rect x="14.5" y="7" width="3.5" height="12" rx="1.5" fill="#fff"/>']);
+ if(q>=85)stk.push(['Smooth mover','#8a6cf0','<path d="M5 15c3-6 5-6 8 0s5 6 8 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>']);
+ if(S.tossHits>=5)stk.push(['Ring Toss star','#ffc531','<circle cx="13" cy="13" r="6" stroke="#fff" stroke-width="3.5" fill="none"/>']);
+ if(!stk.length)stk.push(['Showed up','#37a6ff','<circle cx="13" cy="13" r="5" fill="#fff"/>']);
+ $('stickers').innerHTML=stk.map(s=>'<li class="sticker"><span class="sb" style="background:'+s[1]+'"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">'+s[2]+'</svg></span>'+s[0]+'</li>').join('');
+ const alerts=S.log.length;
+ $('sumPrivacy').textContent='Sent to '+p.coach+': dose kept, time in zone, heart and oxygen trends'+(alerts?', and '+alerts+' safety alert'+(alerts>1?'s':''):'')+'. Your group only sees that you kept your dose.';
+ if(!silent)sfx.fanfare();
+}
+$('toPodium').addEventListener('click',()=>{sfx.tap();go('podium');});
+$('againBtn').addEventListener('click',()=>{sfx.tap();go('workout');});
+
+/* ================= PODIUM ================= */
+function ranking(tab){return Object.keys(BOARD).filter(id=>tab==='all'||PEOPLE[id].group===tab).map(id=>({id,...BOARD[id],pct:BOARD[id].done/BOARD[id].of}))
+ .sort((a,b)=>b.pct-a.pct||b.streak-a.streak);}
+function showBoard(){show('podium');const me=App.profile.id;let tab=App.tab;
+ const list=ranking(tab);
+ document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.tab===tab)));
+ $('board').innerHTML='';
+ list.forEach((e,i)=>{const li=document.createElement('li');li.className='row'+(e.id===me?' me':'');
+  li.innerHTML='<span class="rank">'+(i+1)+'</span>'+avatarSVG(PEOPLE[e.id].look,44)+'<span class="rname"><strong>'+(e.id===me?'You ('+PEOPLE[e.id].name+')':PEOPLE[e.id].name)+'</strong><span>'+e.done+' of '+e.of+' sessions kept · '+e.streak+'-day streak</span></span>';
+  if(e.id!==me){const b=document.createElement('button');b.className='cheer';b.textContent='Cheer';b.setAttribute('aria-label','Cheer for '+PEOPLE[e.id].name);
+   b.addEventListener('click',()=>{if(G)G.cheerAt(e.id);sfx.chime();toast('You cheered for '+PEOPLE[e.id].name+'. They\'ll see a heart next time they log in.');b.textContent='Cheered';b.disabled=true;});li.appendChild(b);}
+  else{const s=document.createElement('span');s.className='chip';s.textContent='You';li.appendChild(s);}
+  $('board').appendChild(li);});
+ const ids=list.map(e=>e.id);const kept=list.reduce((a,e)=>a+e.done,0),of=list.reduce((a,e)=>a+e.of,0);
+ $('goalTxt').textContent=kept+' of '+of+' sessions kept this week';$('goalFill').style.width=Math.round(kept/of*100)+'%';
+ if(G)G.showPodium(list,me);
+ const r=ids.indexOf(me);if(r>=0&&App.screen==='podium'&&S&&S.counted&&!S.announced){S.announced=true;toast(r===0?'You\'re on top of the podium this week!':'You are #'+(r+1)+' in this group this week.');}
+ updateFallback();}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{App.tab=t.dataset.tab;sfx.tap();showBoard();}));
+$('podAgain').addEventListener('click',()=>{sfx.tap();go('workout');});
+$('podPlayers').addEventListener('click',()=>{sfx.tap();go('players');});
+
+/* ================= DEMO PANEL ================= */
+$('demoBtn').addEventListener('click',()=>{const p=$('demoPanel');p.hidden=!p.hidden;$('demoBtn').setAttribute('aria-expanded',String(!p.hidden));$('demoBtn').textContent=p.hidden?'Demo controls':'Close demo controls';});
+document.querySelectorAll('[data-dgo]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.dgo)));
+document.querySelectorAll('[data-dw]').forEach(b=>b.addEventListener('click',()=>{endSession();startSession(b.dataset.dw);toast(WK[b.dataset.dw].name+': band on '+WK[b.dataset.dw].band);}));
+document.querySelectorAll('[data-sp]').forEach(b=>b.addEventListener('click',()=>{App.speed=+b.dataset.sp;document.querySelectorAll('[data-sp]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));if(S){S.curlPeriod=S.nomT/Math.sqrt(App.speed);$('speedChip').textContent='Demo time ×'+App.speed;}toast('Demo time ×'+App.speed);}));
+function needSession(){if(!S||S.finished){startSession(App.workout);}else if(App.screen!=='session'){show('session');setupSessionUI();if(G)G.setMode(S.w);}}
+document.querySelectorAll('[data-ev]').forEach(b=>b.addEventListener('click',()=>{const ev=b.dataset.ev;
+ if(ev==='autotoss'){if(App.screen!=='toss')go('toss');if(TS){if(TS.done)startToss();TS.auto=true;$('tossAuto').setAttribute('aria-pressed','true');$('tossAuto').textContent='Stop auto-play';}return;}
+ needSession();
+ if(ev==='dip'){S.ev.dip=16;toast('Simulating an oxygen dip…');}
+ else if(ev==='spike'){S.ev.spike=14;toast('Simulating a heart-rate spike…');}
+ else if(ev==='still'){S.still=true;S.stillT=0;toast('Simulating no movement from the band…');}
+ else if(ev==='overdo'){S.progress=Math.max(S.progress,S.target*1.14);if(S.w==='curl'){S.reps.R=S.progress-S.reps.L;}[0.25,0.5,0.75,1].forEach(m=>S.ms[m]=1);S.overdoWarned=false;toast('Jumped past the dose…');}
+ else if(ev==='almost'){S.progress=Math.max(S.progress,Math.floor(S.target*0.95));if(S.w==='curl'){S.reps.R=S.progress-S.reps.L;}S.actT=Math.max(S.actT,S.w==='curl'?S.progress*3:S.progress);S.zoneT=Math.max(S.zoneT,S.actT*0.8);[0.25,0.5,0.75].forEach(m=>S.ms[m]=1);}
+ else if(ev==='rep'){if(S.w!=='curl'){endSession();startSession('curl');}manualRep();}
+}));
+
+/* keyboard */
+document.addEventListener('keydown',e=>{if(e.code!=='Space'&&e.key!==' ')return;if(!$('alertWrap').hidden)return;
+ const tag=(e.target&&e.target.tagName)||'';
+ if(App.screen==='toss'){e.preventDefault();if(!e.repeat)holdStart();return;}
+ if(App.screen==='session'&&S&&S.w==='curl'&&tag!=='BUTTON'){e.preventDefault();if(!e.repeat)manualRep();}});
+document.addEventListener('keyup',e=>{if((e.code==='Space'||e.key===' ')&&App.screen==='toss'){e.preventDefault();holdEnd();}});
+
+/* ================= FALLBACK 2D ================= */
+function updateFallback(){if(G)return;const p=App.profile;$('fbBody').setAttribute('fill',hex(p.look.shirt));
+ const w=S?S.w:App.workout;const band=$('fbBand');
+ if(App.screen==='toss'||w==='curl'){band.setAttribute('x','160');band.setAttribute('y','150');}else{band.setAttribute('x','140');band.setAttribute('y','180');}
+ const txt={players:p.name+' is ready',workout:WK[App.workout].name+': band on '+WK[App.workout].band,session:S?WK[S.w].name+' in progress':'',toss:'Ring Toss: hold to lift, let go to throw',summary:'Session complete',podium:'This week\'s podium'};
+ $('fbScene').textContent=txt[App.screen]||'';}
+function fbTick(){if(G||!S)return;$('fbHeart').style.setProperty('--beat',(60/Math.max(40,S.hr)).toFixed(2)+'s');$('fbBubble').setAttribute('r',String(14+clamp((S.spo2-84)/14,0,1)*12));$('fbBubble').setAttribute('fill',S.spo2<92?'#ffd27a':'#bfeaff');}
+
+/* ================= LOOP ================= */
+buildPlayers();buildWorkouts();show('players');if(G)G.setMode('lobby');
+let last=performance.now(),fbAcc=0;
+function loop(now){const dt=Math.min(0.05,Math.max(0,(now-last)/1000));last=now;T+=dt;
+ try{simTick(dt);tossTick(dt);hudTick(dt);if(G)G.frame(dt);fbAcc+=dt;if(fbAcc>0.5){fbAcc=0;fbTick();}}catch(err){if(window.console)console.warn(err);}
+ requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+})();
+</script>

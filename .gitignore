@@ -1,0 +1,10 @@
+.playwright-mcp/
+.agents/
+.codex/
+.aws/
+*.pdf
+__pycache__/
+_site/
+.DS_Store
+.env
+.env.*

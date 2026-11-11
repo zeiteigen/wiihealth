@@ -1,0 +1,1221 @@
+<title>League Night</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bungee&family=Fredoka:wght@500;600;700&display=swap">
+<style>
+/* Layout: a sunny community-league clubhouse. Bunting + scoreboard band on top, big glossy cards on a sky field,
+   team colours carry all the identity; one column on phones. Single light theme by choice. */
+:root{
+  --sky:#dcf0fc; --sky-2:#b9e1fa; --paper:#ffffff; --paper-2:#f2f8fd;
+  --ink:#132f47; --ink-2:#44607a; --line:#cde2f1;
+  --blue:#1f8ee0; --blue-dk:#1468a8; --gold:#f4b223; --gold-dk:#b97b00; --grass:#5cb944; --grass-dk:#3a8a2a;
+  --ok:#23864d; --ok-bg:#dff5e7; --warn:#b85e00; --warn-bg:#fff0d9; --bad:#c8302a; --bad-bg:#fde3e1;
+  --f-display:'Fredoka','Nunito',ui-rounded,system-ui,sans-serif;
+  --f-body:'Atkinson Hyperlegible',Verdana,system-ui,sans-serif;
+  --f-score:'Bungee','Fredoka',Impact,sans-serif;
+  --r-card:28px; --shadow:0 2px 0 #c4dbee,0 14px 30px rgba(19,47,71,.10);
+  color-scheme:light;
+}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html{background:var(--sky)}
+body{margin:0;min-height:100%;color:var(--ink);font:400 19px/1.5 var(--f-body);
+  background-color:var(--sky);
+  background-image:radial-gradient(120px 46px at 12% 9%,rgba(255,255,255,.95),rgba(255,255,255,0) 70%),
+    radial-gradient(170px 60px at 84% 15%,rgba(255,255,255,.9),rgba(255,255,255,0) 70%),
+    linear-gradient(180deg,var(--sky) 0%,var(--sky-2) 60%,#e9f6e2 100%);
+  background-repeat:no-repeat;background-size:100% 100%;}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;line-height:1.12;margin:0;text-wrap:balance;color:var(--ink)}
+h1{font-size:clamp(30px,4.4vw,46px)} h2{font-size:clamp(24px,3vw,32px)} h3{font-size:22px}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--gold);outline-offset:3px;border-radius:14px}
+.num{font-variant-numeric:tabular-nums}
+.eyebrow{font:600 16px/1.2 var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.inner{max-width:1180px;margin:0 auto}
+
+/* top band */
+.top{background:var(--paper);box-shadow:0 3px 0 #c4dbee}
+.top .inner{display:flex;align-items:center;gap:14px 20px;flex-wrap:wrap;padding-block:12px}
+.logo{display:flex;align-items:center;gap:10px;font:700 28px/1 var(--f-display);color:var(--ink);background:none;border:0;cursor:pointer;padding:4px}
+.logo small{display:block;font:500 14px/1.1 var(--f-body);color:var(--ink-2);letter-spacing:.02em}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.tab{font:600 18px/1 var(--f-display);min-height:48px;padding:12px 18px;border-radius:999px;border:2px solid var(--line);background:var(--paper-2);cursor:pointer;color:var(--ink)}
+.tab[aria-current="page"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.bunting{display:flex;height:26px;overflow:hidden;position:relative}
+.bunting::before{content:"";position:absolute;left:0;right:0;top:2px;height:2px;background:#8a6a44;opacity:.6}
+.bunting span{flex:0 0 38px;height:24px;margin-top:3px;clip-path:polygon(4% 0,96% 0,50% 100%)}
+
+/* buttons */
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:10px;font:600 20px/1.1 var(--f-display);min-height:58px;padding:14px 28px;border-radius:999px;border:2px solid #fff;background:linear-gradient(#ffffff,#e3eff8);color:var(--ink);box-shadow:0 4px 0 #b4cde1,0 10px 20px rgba(19,47,71,.14);cursor:pointer;text-align:center;transition:transform .08s}
+.btn::before{content:"";position:absolute;left:14%;right:14%;top:3px;height:42%;border-radius:999px;background:linear-gradient(rgba(255,255,255,.85),rgba(255,255,255,0));pointer-events:none}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #b4cde1,0 4px 10px rgba(19,47,71,.14)}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.btn-blue{background:linear-gradient(#62bdf7,#1f8ee0);color:#fff;box-shadow:0 4px 0 var(--blue-dk),0 10px 20px rgba(20,104,168,.28)}
+.btn-gold{background:linear-gradient(#ffd66b,#f4b223);color:#3b2a00;box-shadow:0 4px 0 var(--gold-dk),0 10px 20px rgba(185,123,0,.25)}
+.btn-green{background:linear-gradient(#7fd968,#3fa62c);color:#fff;box-shadow:0 4px 0 #2a7a1c,0 10px 20px rgba(42,122,28,.25)}
+.btn-red{background:linear-gradient(#f2766f,#d6372f);color:#fff;box-shadow:0 4px 0 #9b231d,0 10px 20px rgba(155,35,29,.25)}
+.btn-sm{min-height:48px;font-size:18px;padding:10px 18px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+
+.card{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--shadow);padding:24px}
+main.inner{padding-block:24px 140px;display:block}
+.view{display:flex;flex-direction:column;gap:24px}
+.lede{font-size:20px;color:var(--ink-2);max-width:62ch}
+
+/* banners & versus */
+.versus{display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:14px}
+.banner{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+.banner-pole{width:100%;max-width:220px;height:10px;border-radius:5px;background:linear-gradient(#b48d5c,#7d5a33)}
+.banner-cloth{width:86%;max-width:190px;margin-top:-4px;background:linear-gradient(180deg,var(--c),var(--d));color:#fff;text-align:center;padding:14px 10px 40px;clip-path:polygon(0 0,100% 0,100% 100%,50% 84%,0 100%);display:flex;flex-direction:column;align-items:center;gap:6px}
+.banner-mascot{width:84px;height:84px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:inset 0 -4px 0 rgba(0,0,0,.08)}
+.banner-day{font:600 15px/1 var(--f-display);letter-spacing:.1em;text-transform:uppercase;opacity:.9}
+.banner-name{font:700 24px/1.05 var(--f-display)}
+.banner-group{font-size:16px;color:var(--ink-2);text-align:center}
+.vs-mid{display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:34px}
+.sb{display:flex;align-items:center;gap:8px;background:#0f2b41;border-radius:18px;padding:10px 14px;box-shadow:inset 0 0 0 3px #29506f,0 6px 0 #0a1d2c}
+.sb-num{font:400 34px/1 var(--f-score);color:#ffd66b;min-width:3.2ch;text-align:center;font-variant-numeric:tabular-nums;text-shadow:0 0 10px rgba(255,214,107,.45)}
+.sb-dash{color:#7fa6c4;font:400 24px/1 var(--f-score)}
+.vs-tag{font:400 22px/1 var(--f-score);color:var(--ink)}
+.vs-label{font-size:16px;color:var(--ink-2);text-align:center}
+
+.hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:28px;align-items:center}
+.hero-copy{display:flex;flex-direction:column;gap:16px;min-width:0}
+.rulebox{background:var(--paper-2);border:2px dashed var(--line);border-radius:20px;padding:16px 18px;font-size:18px}
+.rulebox b{font-family:var(--f-display);font-weight:600}
+
+.players{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+.pcard{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center;text-align:left;background:var(--paper);border:3px solid transparent;border-radius:24px;padding:18px;box-shadow:var(--shadow);cursor:pointer;transition:transform .12s,border-color .12s}
+.pcard:hover{transform:translateY(-3px);border-color:var(--c)}
+.pcard .pav{grid-row:span 2;background:var(--l);border-radius:20px;padding:6px 8px 0;display:grid;place-items:end center}
+.pname{font:700 24px/1.1 var(--f-display)}
+.pmeta{font-size:16px;color:var(--ink-2)}
+.pfoot{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;border-top:2px solid var(--paper-2);padding-top:10px;margin-top:4px;font-size:17px}
+.chip{display:inline-flex;align-items:center;gap:6px;font:600 16px/1 var(--f-display);padding:7px 12px;border-radius:999px;background:var(--l,var(--paper-2));color:var(--d,var(--ink))}
+.dots{display:inline-flex;gap:5px}
+.dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--c);display:block}
+.dots i.on{background:var(--c)}
+
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.small-match .versus .banner-mascot{width:60px;height:60px}
+.small-match .banner-name{font-size:20px}
+.small-match .sb-num{font-size:26px}
+
+/* workout pick */
+.events{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:20px}
+.event{display:flex;flex-direction:column;gap:12px;align-items:stretch}
+.event .fig{background:linear-gradient(#eaf6fe,#d9efd2);border-radius:22px;display:grid;place-items:center;padding:8px}
+.event .fig svg{width:100%;max-width:230px;height:auto}
+.band-where{display:flex;gap:10px;align-items:center;font-size:18px;background:#fff6dc;border-radius:16px;padding:10px 14px;color:#5a3d00}
+.band-where b{font-family:var(--f-display);font-weight:600}
+.dose-line{font-size:18px;color:var(--ink-2)}
+.dose-line b{color:var(--ink)}
+.band-pulse{animation:bandp 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes bandp{0%,100%{transform:scale(.8);opacity:.25}50%{transform:scale(1.25);opacity:.55}}
+.back{align-self:flex-start}
+
+/* live */
+.scorebar{display:flex;align-items:center;justify-content:center;gap:12px 18px;flex-wrap:wrap;background:#0f2b41;color:#fff;border-radius:24px;padding:12px 18px;box-shadow:0 6px 0 #0a1d2c}
+.scorebar .side{display:flex;align-items:center;gap:10px;font:700 20px/1 var(--f-display)}
+.scorebar .sb-num{font-size:32px}
+.scorebar .live-dot{font:600 15px/1 var(--f-display);letter-spacing:.1em;color:#ff8b84;display:flex;align-items:center;gap:6px}
+.scorebar .live-dot::before{content:"";width:10px;height:10px;border-radius:50%;background:#ff5b52;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.live-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:22px;align-items:start}
+.live-main{display:flex;flex-direction:column;gap:18px}
+.who{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.who .pav{background:var(--l);border-radius:18px;padding:4px 6px 0}
+.who h2{font-size:28px}
+.who .clock{margin-left:auto;font:400 30px/1 var(--f-score);color:var(--ink);font-variant-numeric:tabular-nums}
+.coach{display:flex;align-items:center;gap:14px;font:600 22px/1.25 var(--f-display);padding:16px 18px;border-radius:20px;background:var(--ok-bg);color:var(--ok);border:3px solid currentColor}
+.coach.warn{background:var(--warn-bg);color:var(--warn)}
+.coach.bad{background:var(--bad-bg);color:var(--bad)}
+.coach.info{background:#e3f1fc;color:var(--blue-dk)}
+.coach .ci{flex:0 0 40px;height:40px;border-radius:50%;background:currentColor;display:grid;place-items:center}
+.coach .ci svg{width:24px;height:24px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.stat{background:var(--paper-2);border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat .lab{font:600 16px/1.2 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.stat .val{font:700 46px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.stat .val small{font-size:20px;font-weight:600;color:var(--ink-2);margin-left:4px}
+.stat .sub{font-size:16px;color:var(--ink-2)}
+.stat.hrstat{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;gap:6px 20px;align-items:center}
+.heart{width:58px;height:58px;color:#e5483f;animation:beat var(--beat,.8s) ease-in-out infinite}
+@keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.14)}30%{transform:scale(.98)}}
+.zbar{position:relative;height:38px;border-radius:19px;background:linear-gradient(90deg,#d7e9f7,#e9f1f7 40%,#fbe6d4);box-shadow:inset 0 2px 4px rgba(19,47,71,.12)}
+.zband{position:absolute;top:0;bottom:0;background:linear-gradient(#8fe07a,#4fb53a);border-radius:12px;box-shadow:inset 0 2px 0 rgba(255,255,255,.5)}
+.zmark{position:absolute;top:-8px;width:8px;height:54px;margin-left:-4px;border-radius:4px;background:var(--ink);box-shadow:0 0 0 3px #fff;transition:left .25s}
+.zlabels{position:relative;height:24px;font-size:16px;color:var(--ink-2)}
+.zlabels span{position:absolute;transform:translateX(-50%);white-space:nowrap;font-variant-numeric:tabular-nums}
+.zcap{display:flex;justify-content:space-between;font-size:16px;color:var(--ink-2);gap:8px}
+.stat.ok .val{color:var(--ok)} .stat.warn .val{color:var(--warn)} .stat.bad .val{color:var(--bad)}
+.trace{background:#0f2b41;border-radius:20px;padding:12px 14px;color:#cfe3f3}
+.trace-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:16px}
+.trace-h b{font-family:var(--f-display);font-weight:600;color:#fff}
+.legend{display:flex;gap:14px}
+.legend i{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:5px}
+#trace{width:100%;height:120px;display:block}
+.live-side{display:flex;flex-direction:column;gap:18px;align-items:stretch}
+.ring-wrap{display:grid;place-items:center;position:relative}
+.ring-wrap svg{width:200px;height:200px}
+.ring-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.ring-txt b{font:700 52px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.ring-txt span{font-size:16px;color:var(--ink-2);max-width:12ch}
+.coinline{display:flex;align-items:center;justify-content:center;gap:10px;font:600 20px/1.2 var(--f-display)}
+.coin-ico{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3b8,#f4b223 55%,#c98400);box-shadow:inset 0 0 0 3px #e09a00;display:inline-grid;place-items:center;font:700 15px/1 var(--f-display);color:#7a4c00}
+.minitotems{display:flex;justify-content:center;gap:26px;align-items:flex-end;padding-top:6px}
+.mates{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.mates li{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;font-size:17px}
+.bar{height:12px;border-radius:6px;background:var(--paper-2);overflow:hidden;box-shadow:inset 0 1px 2px rgba(19,47,71,.15)}
+.bar i{display:block;height:100%;background:var(--c,var(--blue));border-radius:6px;transition:width .4s}
+.side-h{font:700 20px/1.2 var(--f-display)}
+
+/* totem */
+.totem{display:flex;flex-direction:column;align-items:center;gap:8px;--h:300px;--w:92px}
+.totem.sm{--h:170px;--w:54px}
+.totem-pole{position:relative;width:var(--w);height:var(--h);margin-top:calc(var(--w)*.55)}
+.totem-track{position:absolute;inset:0;border-radius:calc(var(--w)/2);background:#fff;box-shadow:inset 0 3px 8px rgba(19,47,71,.18),0 0 0 4px var(--l);overflow:hidden}
+.totem-fill{position:absolute;left:0;right:0;bottom:0;height:0;background:repeating-linear-gradient(180deg,rgba(255,255,255,.0) 0 22px,rgba(255,255,255,.28) 22px 26px),linear-gradient(90deg,var(--d),var(--c) 45%,var(--d));transition:height .5s ease-out}
+.totem-ticks{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 calc(var(--h)/10 - 2px),rgba(19,47,71,.12) calc(var(--h)/10 - 2px) calc(var(--h)/10));pointer-events:none}
+.totem-head{position:absolute;left:50%;bottom:0;width:calc(var(--w)*1.15);height:calc(var(--w)*1.15);transform:translate(-50%,40%);background:#fff;border-radius:50%;box-shadow:0 0 0 4px var(--c),0 6px 12px rgba(19,47,71,.2);display:grid;place-items:center;transition:bottom .5s ease-out;z-index:2}
+.totem-head svg{width:82%;height:82%}
+.totem-head.pop{animation:pop .4s}
+@keyframes pop{50%{transform:translate(-50%,40%) scale(1.15)}}
+.totem-score{font:400 34px/1 var(--f-score);color:var(--d);font-variant-numeric:tabular-nums;margin-top:calc(var(--w)*.45)}
+.totem.sm .totem-score{font-size:24px}
+.totem-name{font:700 20px/1.1 var(--f-display);text-align:center}
+.totem.sm .totem-name{font-size:16px}
+
+/* coins */
+.coin{position:fixed;left:0;top:0;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;pointer-events:none;z-index:60;background:radial-gradient(circle at 35% 30%,#fff3b8,#f4b223 55%,#c98400);box-shadow:inset 0 0 0 3px #e09a00,0 2px 6px rgba(0,0,0,.2)}
+
+/* match view */
+.arena{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:end;background:linear-gradient(#eaf6fe 0%,#eaf6fe 70%,#bfe6a8 70%,#8fd172 100%);border-radius:var(--r-card);box-shadow:var(--shadow);padding:24px 16px 28px}
+.arena .mid{display:flex;flex-direction:column;align-items:center;gap:10px;align-self:center;text-align:center;max-width:220px}
+.arena .lead{font:600 20px/1.25 var(--f-display)}
+.rosters{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.roster h3{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.mrow{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:10px 0;border-top:2px solid var(--paper-2)}
+.mrow .nm{font:600 19px/1.2 var(--f-display)}
+.mrow .st{font-size:16px;color:var(--ink-2)}
+.mrow .bars{grid-column:2/3;display:flex;flex-direction:column;gap:4px}
+.mrow.you{background:linear-gradient(90deg,var(--l),transparent);border-radius:14px;padding-left:6px}
+.mrow.resting .st{color:var(--bad);font-weight:700}
+.cheer{min-height:48px;padding:8px 14px;border-radius:999px;border:2px solid var(--line);background:#fff;font:600 17px/1 var(--f-display);cursor:pointer;color:var(--ink)}
+.cheer.hot{background:var(--gold);border-color:var(--gold-dk);color:#3b2a00;animation:nudge 1s infinite}
+@keyframes nudge{50%{transform:scale(1.06)}}
+.feed{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.feed li{display:flex;gap:10px;align-items:center;font-size:18px;padding:8px 12px;border-radius:14px;background:var(--paper-2)}
+.feed li .tag{flex:0 0 auto}
+.alertbanner{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--bad-bg);color:var(--bad);border:3px solid var(--bad);border-radius:20px;padding:14px 18px;font:600 20px/1.3 var(--f-display)}
+
+/* standings */
+.tblwrap{overflow-x:auto}
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:640px;font-size:18px}
+th{font:600 15px/1.2 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);text-align:right;padding:10px 10px;border-bottom:3px solid var(--line)}
+th:nth-child(2){text-align:left}
+td{padding:12px 10px;text-align:right;border-bottom:2px solid var(--paper-2);font-variant-numeric:tabular-nums}
+td.team{text-align:left}
+td.team div{display:flex;align-items:center;gap:10px;font:600 20px/1.15 var(--f-display)}
+td.team small{display:block;font:400 15px/1.2 var(--f-body);color:var(--ink-2)}
+td.pos{font:400 24px/1 var(--f-score);color:var(--ink-2);text-align:center;width:48px}
+td.pts{font:400 24px/1 var(--f-score);color:var(--ink)}
+.form{display:inline-flex;gap:4px}
+.form i{width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;font:700 13px/1 var(--f-display);font-style:normal;color:#fff}
+.form .W{background:var(--ok)} .form .L{background:#9aaabb} .form .D{background:var(--gold-dk)}
+.bracket{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
+.bk{display:flex;flex-direction:column;gap:8px}
+.bk .slot{display:flex;align-items:center;gap:8px;background:var(--paper-2);border-radius:14px;padding:8px 10px;font:600 18px/1.1 var(--f-display);min-width:0}
+.bk .slot span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk .lbl{font-size:15px;color:var(--ink-2);text-align:center}
+.final{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.mvps{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px}
+.mvps li{display:grid;grid-template-columns:auto 48px 1fr;gap:12px;align-items:center;background:var(--paper-2);border-radius:18px;padding:8px 12px}
+.medal{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font:700 18px/1 var(--f-display);color:#fff}
+.mvps .nm{font:600 20px/1.2 var(--f-display)}
+.mvps .st{font-size:16px;color:var(--ink-2)}
+
+/* summary */
+.sum-grid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:26px;align-items:center}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tile{background:var(--paper-2);border-radius:18px;padding:14px 16px}
+.tile b{display:block;font:700 34px/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.tile span{font-size:16px;color:var(--ink-2)}
+.stars{display:flex;gap:6px}
+.stars svg{width:38px;height:38px}
+.teamfx{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font:600 22px/1.3 var(--f-display)}
+.teamfx .arrow{font:400 30px/1 var(--f-score);color:var(--ink-2)}
+
+/* overlays */
+.ov{position:fixed;inset:0;z-index:50;background:rgba(15,43,65,.55);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:calc(20px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.ov-card{background:var(--paper);border-radius:32px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:24px;width:100%;max-width:960px;display:flex;flex-direction:column;gap:16px}
+.ov-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.ov-head .grow{flex:1;min-width:200px}
+.tug-stage{position:relative;border-radius:22px;overflow:hidden;background:#cdeafc}
+#tugCanvas{display:block;width:100%;height:270px}
+.tug-result{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(255,255,255,.88);text-align:center;padding:16px}
+.tug-meters{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tug-meter{display:flex;flex-direction:column;gap:6px;font:600 18px/1.2 var(--f-display)}
+.tug-meter .bar{height:18px;border-radius:9px}
+.status{display:inline-flex;align-items:center;gap:8px;font:600 19px/1.2 var(--f-display);padding:10px 16px;border-radius:999px}
+.status.ok{background:var(--ok-bg);color:var(--ok)} .status.warn{background:var(--warn-bg);color:var(--warn)} .status.bad{background:var(--bad-bg);color:var(--bad)}
+.timer{font:400 34px/1 var(--f-score);font-variant-numeric:tabular-nums}
+.al-card{border:6px solid var(--bad)}
+.al-icon{width:64px;height:64px;border-radius:50%;background:var(--bad);color:#fff;display:grid;place-items:center;font:700 40px/1 var(--f-display);flex:0 0 auto}
+.al-reason{font-size:21px}
+.al-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:18px}
+.vitals{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vital{background:var(--paper-2);border-radius:18px;padding:12px 14px;display:flex;flex-direction:column}
+.vital span{font:600 16px/1.2 var(--f-display);color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em}
+.vital b{font:700 42px/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.vital small{font-size:16px;color:var(--ink-2)}
+.vital.bad b{color:var(--bad)} .vital.ok b{color:var(--ok)}
+.al-steps{margin:0;padding-left:24px;display:flex;flex-direction:column;gap:6px;font-size:19px}
+.al-team{background:#fff7e2;border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.al-team ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.al-team li{display:flex;align-items:center;gap:10px;font-size:19px;background:#fff;border-radius:16px;padding:6px 12px;animation:slidein .4s ease-out}
+@keyframes slidein{from{transform:translateY(10px);opacity:.3}to{transform:none;opacity:1}}
+.helpmsg{background:#e3f1fc;color:var(--blue-dk);border-radius:16px;padding:12px 16px;font:600 19px/1.3 var(--f-display)}
+
+.trophy-ov{background:radial-gradient(circle at 50% 40%,#fff7d6 0%,#ffe9a3 30%,rgba(15,43,65,.85) 75%)}
+.tr-stage{position:relative;width:100%;max-width:820px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px 8px}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:51}
+.rays{position:absolute;left:50%;top:150px;width:520px;height:520px;max-width:120vw;margin-left:-260px;margin-top:-260px;background:repeating-conic-gradient(rgba(255,214,107,.55) 0 10deg,rgba(255,214,107,0) 10deg 20deg);border-radius:50%;-webkit-mask:radial-gradient(circle,#000 30%,transparent 70%);mask:radial-gradient(circle,#000 30%,transparent 70%);animation:spin 30s linear infinite;pointer-events:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.trophy{position:relative;z-index:2;animation:lift 1.6s cubic-bezier(.2,.9,.3,1.2) both, bob 2.4s 1.6s ease-in-out infinite}
+.trophy svg{width:190px;height:auto}
+@keyframes lift{from{transform:translateY(120px) scale(.7)}to{transform:translateY(0) scale(1)}}
+@keyframes bob{50%{transform:translateY(-10px)}}
+.lifters{display:flex;justify-content:center;gap:2px;margin-top:-34px;position:relative;z-index:3;flex-wrap:wrap}
+.lifters > div{animation:hop .9s ease-in-out infinite}
+.lifters > div:nth-child(2n){animation-delay:.2s}
+.lifters > div:nth-child(3n){animation-delay:.4s}
+@keyframes hop{50%{transform:translateY(-8px)}}
+.tr-card{background:var(--paper);border-radius:28px;padding:20px 24px;box-shadow:0 14px 40px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:10px;align-items:center;position:relative;z-index:4;max-width:640px;width:100%}
+.tr-title{font:700 clamp(30px,5vw,46px)/1.1 var(--f-display)}
+.ribbon{display:inline-block;background:var(--bad);color:#fff;font:600 17px/1 var(--f-display);letter-spacing:.1em;text-transform:uppercase;padding:10px 26px;clip-path:polygon(0 0,100% 0,94% 50%,100% 100%,0 100%,6% 50%)}
+
+/* toast + demo */
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:min(560px,calc(100% - 32px))}
+.toast{background:var(--ink);color:#fff;font:600 19px/1.3 var(--f-display);padding:12px 20px;border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:slidein .3s ease-out;text-align:center}
+.demo-fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:80}
+.demo-fab .btn{gap:10px}
+.demo-fab .btn .pip{width:12px;height:12px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 3px rgba(200,48,42,.25);animation:blink 1.4s infinite}
+.demo{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:80;width:min(360px,calc(100vw - 32px));max-height:calc(100vh - 120px);overflow-y:auto;background:#0f2b41;color:#e6f2fb;border-radius:24px;padding:16px;box-shadow:0 16px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:12px;font-size:16px}
+.demo h3{color:#fff;font-size:20px;display:flex;justify-content:space-between;align-items:center}
+.demo .grp{display:flex;flex-direction:column;gap:6px}
+.demo .glab{font:600 14px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:#8fb3cf}
+.demo .bts{display:flex;flex-wrap:wrap;gap:6px}
+.dbtn{min-height:44px;padding:8px 12px;border-radius:12px;border:2px solid #2d5676;background:#173d5a;color:#fff;font:600 16px/1.1 var(--f-display);cursor:pointer}
+.dbtn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#3b2a00}
+.dbtn.danger{border-color:#e0605a;background:#5a2324}
+.demo .hint{color:#a9c6dc;font-size:15px}
+.xbtn{min-width:44px;min-height:44px;border-radius:50%;border:0;background:#173d5a;color:#fff;font:700 20px/1 var(--f-display);cursor:pointer}
+.sound{min-height:48px;padding:10px 16px;border-radius:999px;border:2px solid var(--line);background:#fff;font:600 17px/1 var(--f-display);cursor:pointer;display:inline-flex;gap:8px;align-items:center;color:var(--ink)}
+
+@media (max-width:860px){
+  .hero,.live-grid,.al-grid,.sum-grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat.hrstat{grid-column:1/-1}
+  .nav{margin-left:0;width:100%}
+  .tab{flex:1 1 auto}
+}
+@media (max-width:560px){
+  .versus{grid-template-columns:1fr 1fr;gap:10px}
+  .versus .vs-mid{grid-column:1/-1;grid-row:1;padding-top:0}
+  .banner-name{font-size:20px}
+  .arena{grid-template-columns:1fr 1fr}
+  .arena .mid{grid-column:1/-1;grid-row:1;max-width:none}
+  .totem{--h:220px;--w:72px}
+  .stat .val{font-size:38px}
+  .bracket{grid-template-columns:1fr}
+  .who .clock{margin-left:0}
+  .tug-meters{grid-template-columns:1fr}
+  .card{padding:18px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  .rays{animation:none}
+}
+</style>
+
+<header class="top gut">
+  <div class="inner">
+    <button class="logo" id="logoBtn" aria-label="League Night clubhouse">
+      <span id="logoPennant"></span>
+      <span>League Night<small>CCCARE Autumn League</small></span>
+    </button>
+    <nav class="nav" aria-label="Main">
+      <button class="tab" data-go="home" aria-current="page">Clubhouse</button>
+      <button class="tab" data-go="match">Match Day</button>
+      <button class="tab" data-go="standings">Standings</button>
+      <button class="sound" id="soundBtn" aria-pressed="true">Sound: On</button>
+    </nav>
+  </div>
+</header>
+<div class="bunting" id="bunting" aria-hidden="true"></div>
+
+<main class="inner gut">
+
+<!-- HOME -->
+<section class="view" id="v-home" aria-labelledby="homeH">
+  <div class="card hero">
+    <div class="hero-copy">
+      <div class="eyebrow" id="weekLabel">Week 6 of 8 · Autumn League</div>
+      <h1 id="homeH">Tonight's big match</h1>
+      <p class="lede">Your exercise group is your team. Do the dose your kinesiologist set, stay in your own heart-rate zone, and your effort adds to the team total.</p>
+      <div class="rulebox"><b>How a match is won:</b> each person scores the share of their weekly dose they finish, counted only while they're in their own safe zone. The team with the higher average wins. A gentle walker scores the same as a jogger.</div>
+      <div class="row">
+        <button class="btn btn-blue" data-go="match">Watch the match live</button>
+        <button class="btn" data-go="standings">League standings</button>
+      </div>
+    </div>
+    <div id="homeVersus"></div>
+  </div>
+  <div class="row" style="justify-content:space-between">
+    <h2>Who's suiting up tonight?</h2>
+    <p class="pmeta">Example players for the demo. Only first names and initials are shared with the league.</p>
+  </div>
+  <div class="players" id="playerGrid"></div>
+  <div class="split">
+    <div class="card small-match"><div class="eyebrow" style="margin-bottom:12px">Also playing this week</div><div id="otherMatch"></div></div>
+    <div class="card"><div class="eyebrow" style="margin-bottom:10px">Clubhouse news</div><ul class="feed" id="homeFeed"></ul></div>
+  </div>
+</section>
+
+<!-- WORKOUT PICK -->
+<section class="view" id="v-workout" hidden aria-labelledby="wkH">
+  <button class="btn btn-sm back" data-go="home">Back to the clubhouse</button>
+  <div class="who" id="wkWho"></div>
+  <p class="lede" id="wkLede"></p>
+  <div class="events" id="eventGrid"></div>
+</section>
+
+<!-- LIVE -->
+<section class="view" id="v-live" hidden aria-labelledby="liveH">
+  <div class="scorebar" id="liveScorebar"></div>
+  <div class="live-grid">
+    <div class="card live-main">
+      <div class="who" id="liveWho"></div>
+      <div class="coach" id="coach" role="status" aria-live="polite"></div>
+      <div class="stats">
+        <div class="stat hrstat" id="hrStat">
+          <svg class="heart" id="heartIco" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 21s-7.5-4.6-9.6-9.3C1 8.4 3 5 6.4 5c2 0 3.4 1.1 4.1 2.4h3c.7-1.3 2.1-2.4 4.1-2.4C21 5 23 8.4 21.6 11.7 19.5 16.4 12 21 12 21z"/></svg>
+          <div style="min-width:0">
+            <div class="lab">Heart rate</div>
+            <div class="val"><span id="hrVal">--</span><small>bpm</small></div>
+          </div>
+          <div style="grid-column:1/-1;display:flex;flex-direction:column;gap:4px">
+            <div class="zbar" id="zbar"><div class="zband" id="zband"></div><div class="zmark" id="zmark"></div></div>
+            <div class="zlabels" id="zlabels"></div>
+            <div class="zcap"><span>Too easy</span><span><b id="zoneTxt">Your zone</b></span><span>Ease off</span></div>
+          </div>
+        </div>
+        <div class="stat" id="spStat"><div class="lab">Blood oxygen</div><div class="val"><span id="spVal">--</span><small>%</small></div><div class="sub">Safe above 92%</div></div>
+        <div class="stat" id="tpStat"><div class="lab" id="tpLab">Cadence</div><div class="val"><span id="tpVal">--</span><small id="tpUnit">spm</small></div><div class="sub" id="tpSub">Aim 100–115</div></div>
+        <div class="stat"><div class="lab" id="ctLab">Steps</div><div class="val"><span id="ctVal">0</span></div><div class="sub" id="ctSub">Counted by your band</div></div>
+      </div>
+      <div class="trace">
+        <div class="trace-h"><span><b>Band sensor, live</b> · accelerometer 50 Hz · <span id="traceWhere">lower leg</span></span>
+          <span class="legend"><span><i style="background:#ff8a7a"></i>x</span><span><i style="background:#7fe08a"></i>y</span><span><i style="background:#7cc4ff"></i>z</span></span></div>
+        <canvas id="trace" aria-label="Live accelerometer trace"></canvas>
+      </div>
+      <div class="row">
+        <button class="btn btn-gold" id="tugBtn">Play Tug of War</button>
+        <button class="btn" id="pauseBtn">Take a rest</button>
+        <button class="btn btn-blue" id="finishBtn">Hand in my scorecard</button>
+      </div>
+      <p class="pmeta" id="keyHint">Keyboard: Space adds a rep (curls) or a pull (Tug of War).</p>
+    </div>
+    <aside class="card live-side" aria-label="Your contribution">
+      <div class="side-h">Tonight's dose</div>
+      <div class="ring-wrap" id="ringWrap">
+        <svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="80" fill="none" stroke="#e6f1f9" stroke-width="22"/><circle id="ringArc" cx="100" cy="100" r="80" fill="none" stroke="#3fa62c" stroke-width="22" stroke-linecap="round" stroke-dasharray="502.65" stroke-dashoffset="502.65" transform="rotate(-90 100 100)"/></svg>
+        <div class="ring-txt"><b id="ringPct">0%</b><span id="ringSub">of 15 min</span></div>
+      </div>
+      <div class="coinline"><span class="coin-ico">+</span><span><b id="coinCt" class="num">0</b> team coins sent</span></div>
+      <div class="minitotems" id="liveTotems"></div>
+      <div class="side-h">Your teammates this week</div>
+      <ul class="mates" id="liveMates"></ul>
+    </aside>
+  </div>
+</section>
+
+<!-- SUMMARY -->
+<section class="view" id="v-summary" hidden aria-labelledby="sumH">
+  <div class="card" style="display:flex;flex-direction:column;gap:22px">
+    <div><div class="eyebrow">Scorecard handed in</div><h1 id="sumH">Nice work tonight</h1></div>
+    <div class="sum-grid">
+      <div class="ring-wrap"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="80" fill="none" stroke="#e6f1f9" stroke-width="22"/><circle id="sumArc" cx="100" cy="100" r="80" fill="none" stroke="#3fa62c" stroke-width="22" stroke-linecap="round" stroke-dasharray="502.65" stroke-dashoffset="502.65" transform="rotate(-90 100 100)"/></svg>
+        <div class="ring-txt"><b id="sumPct">0%</b><span>dose complete</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div class="stars" id="sumStars" aria-label="Consistency stars"></div>
+        <p class="lede" id="sumMsg"></p>
+        <div class="tiles" id="sumTiles"></div>
+      </div>
+    </div>
+    <div class="rulebox teamfx" id="sumTeam"></div>
+    <div class="row">
+      <button class="btn btn-blue" data-go="match">See the match update</button>
+      <button class="btn" id="againBtn">Pick another event</button>
+      <button class="btn" data-go="standings">Standings</button>
+    </div>
+  </div>
+</section>
+
+<!-- MATCH DAY -->
+<section class="view" id="v-match" hidden aria-labelledby="matchH">
+  <div><div class="eyebrow" id="matchEyebrow">Match day · Week 6</div><h1 id="matchH">Trailblazers vs Tortoises</h1></div>
+  <div id="matchAlert"></div>
+  <div class="arena" id="arena"></div>
+  <div class="rosters" id="rosters"></div>
+  <div class="split">
+    <div class="card"><div class="side-h" style="margin-bottom:10px">Live from the league</div><ul class="feed" id="matchFeed"></ul></div>
+    <div class="card" style="display:flex;flex-direction:column;gap:14px">
+      <div class="side-h">Sunday 6 pm: final whistle</div>
+      <p>Matches close at the end of the week. The winning team lifts the weekly trophy, and the most consistent player is named MVP.</p>
+      <button class="btn btn-gold" id="whistleBtn">Skip to the final whistle</button>
+    </div>
+  </div>
+</section>
+
+<!-- STANDINGS -->
+<section class="view" id="v-standings" hidden aria-labelledby="stH">
+  <div><div class="eyebrow">CCCARE Autumn League</div><h1 id="stH">League standings</h1></div>
+  <div class="card tblwrap"><table id="table" aria-label="League table"></table></div>
+  <div class="split">
+    <div class="card" style="display:flex;flex-direction:column;gap:14px">
+      <div class="side-h">Harvest Cup playoffs · Week 8</div>
+      <p class="pmeta">Seeds if the season ended today.</p>
+      <div class="bracket" id="bracket"></div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div class="side-h">MVP race: most consistent</div>
+      <p class="pmeta">MVP goes to whoever sticks to their own plan most steadily. Speed and fitness don't count.</p>
+      <ul class="mvps" id="mvps"></ul>
+    </div>
+  </div>
+  <div class="card rulebox" style="border-style:solid">
+    <b>Points:</b> win 3, draw 1, loss 0. Ties in the table are broken by average dose completed, then time in zone. Your kinesiologist sets each person's dose and zone, so everyone helps the team equally.
+  </div>
+</section>
+</main>
+
+<!-- TUG OF WAR -->
+<div class="ov" id="ovTug" hidden role="dialog" aria-modal="true" aria-labelledby="tugH">
+  <div class="ov-card">
+    <div class="ov-head">
+      <div class="grow"><div class="eyebrow">Minigame</div><h2 id="tugH">Tug of War</h2></div>
+      <div class="timer" id="tugTimer">0:40</div>
+      <button class="btn btn-sm" id="tugClose">Back to my session</button>
+    </div>
+    <p style="font-size:19px">Your whole team pulls together. A steady pace in your heart-rate zone pulls hardest. Going faster doesn't help, and your pulls only count while you're in your zone.</p>
+    <div class="tug-stage">
+      <canvas id="tugCanvas" aria-label="Tug of war rope"></canvas>
+      <div class="tug-result" id="tugResult" hidden>
+        <h2 id="tugResH">You won!</h2>
+        <p id="tugResP" style="font-size:20px;max-width:46ch"></p>
+        <div class="row" style="justify-content:center"><button class="btn btn-gold" id="tugAgain">Play again</button><button class="btn" id="tugBack">Back to my session</button></div>
+      </div>
+    </div>
+    <div class="tug-meters">
+      <div class="tug-meter"><span id="tugOursL">Your team's pull</span><div class="bar"><i id="tugOurs" style="width:50%"></i></div></div>
+      <div class="tug-meter"><span id="tugTheirsL">Their pull</span><div class="bar"><i id="tugTheirs" style="width:50%"></i></div></div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <span class="status ok" id="tugStatus">Your pulls count</span>
+      <button class="btn btn-blue" id="tugPull">Pull (or press Space)</button>
+    </div>
+  </div>
+</div>
+
+<!-- SAFETY ALERT -->
+<div class="ov" id="ovAlert" hidden role="alertdialog" aria-modal="true" aria-labelledby="alTitle">
+  <div class="ov-card al-card">
+    <div class="ov-head"><div class="al-icon">!</div><div class="grow"><div class="eyebrow">Safety check</div><h2 id="alTitle">Let's take a breather</h2></div></div>
+    <p class="al-reason" id="alReason"></p>
+    <div class="al-grid">
+      <div class="vitals">
+        <div class="vital" id="alSpBox"><span>Blood oxygen</span><b id="alSp">--</b><small>Safe above 92%</small></div>
+        <div class="vital" id="alHrBox"><span>Heart rate</span><b id="alHr">--</b><small id="alZone"></small></div>
+      </div>
+      <ol class="al-steps">
+        <li>Stop and sit down, or stand still holding something steady.</li>
+        <li>Breathe slowly: in through your nose, out through your mouth.</li>
+        <li>If you feel dizzy, short of breath or have chest pain, call your instructor now.</li>
+      </ol>
+    </div>
+    <div class="al-team">
+      <div class="side-h" id="alTeamH">Your team paused your pulls. No points lost.</div>
+      <ul id="alCheers"></ul>
+    </div>
+    <div class="helpmsg" id="alHelpMsg" hidden></div>
+    <div class="row">
+      <button class="btn btn-green" id="alResume" disabled>Waiting for your numbers to settle</button>
+      <button class="btn btn-red" id="alHelp">Call my instructor</button>
+      <button class="btn" id="alEnd">Stop for today</button>
+    </div>
+  </div>
+</div>
+
+<!-- TROPHY -->
+<div class="ov trophy-ov" id="ovTrophy" hidden role="dialog" aria-modal="true" aria-labelledby="trTitle">
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div class="tr-stage">
+    <div class="rays" aria-hidden="true"></div>
+    <span class="ribbon" id="trRibbon">Final whistle · Week 6</span>
+    <div class="trophy" id="trophy"></div>
+    <div class="lifters" id="lifters"></div>
+    <div class="tr-card">
+      <div class="tr-title" id="trTitle">Trailblazers win!</div>
+      <div class="sb"><span class="sb-num" id="trA">0</span><span class="sb-dash">–</span><span class="sb-num" id="trB">0</span></div>
+      <p id="trMvp" style="font-size:20px"></p>
+      <p id="trOther" class="pmeta"></p>
+      <div class="row" style="justify-content:center"><button class="btn btn-blue" id="trStand">See the new standings</button><button class="btn" id="trClose">Close</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" aria-live="polite"></div>
+
+<div class="demo-fab"><button class="btn btn-gold btn-sm" id="demoFab" aria-expanded="false" aria-controls="demo"><span class="pip"></span>Demo controls</button></div>
+<div class="demo" id="demo" hidden>
+  <h3>Demo controls <button class="xbtn" id="demoX" aria-label="Close demo controls">×</button></h3>
+  <div class="grp"><span class="glab">Simulated time</span><div class="bts" id="dSpeed">
+    <button class="dbtn" data-speed="1" aria-pressed="true">1×</button><button class="dbtn" data-speed="5" aria-pressed="false">5×</button><button class="dbtn" data-speed="20" aria-pressed="false">20×</button><button class="dbtn" id="dJump">+3 min</button></div></div>
+  <div class="grp"><span class="glab">Player's pace</span><div class="bts" id="dPace">
+    <button class="dbtn" data-pace="easy" aria-pressed="false">Too easy</button><button class="dbtn" data-pace="steady" aria-pressed="true">Steady</button><button class="dbtn" data-pace="push" aria-pressed="false">Overdoing it</button></div></div>
+  <div class="grp"><span class="glab">Safety events</span><div class="bts">
+    <button class="dbtn danger" id="dSpo2">SpO2 dip to 88%</button><button class="dbtn danger" id="dHr">Heart-rate spike</button></div></div>
+  <div class="grp"><span class="glab">Workout (restarts session)</span><div class="bts">
+    <button class="dbtn" data-wk="walk">Walk</button><button class="dbtn" data-wk="cycle">Cycle</button><button class="dbtn" data-wk="curl">Curls</button></div></div>
+  <div class="grp"><span class="glab">Jump to</span><div class="bts">
+    <button class="dbtn" data-jump="live">Live session</button><button class="dbtn" data-jump="tug">Tug of War</button><button class="dbtn" data-jump="summary">Summary</button><button class="dbtn" data-jump="match">Match Day</button><button class="dbtn" data-jump="trophy">Trophy lift</button><button class="dbtn" data-jump="standings">Standings</button></div></div>
+  <p class="hint">Space = one rep or one pull. Sensor data is simulated: heart rate and SpO2 at 1 Hz, accelerometer x/y/z at 50 Hz.</p>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+const RM=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+/* ---------- data ---------- */
+const TEAMS={
+  tb:{id:'tb',name:'Tuesday Trailblazers',short:'Trailblazers',day:'Tuesday',abbr:'TB',group:'Stroke recovery group',c:'#ef6c2b',d:'#b4471b',l:'#ffe6d6',mascot:'fox',mascotName:'Blaze the Fox'},
+  tt:{id:'tt',name:'Thursday Tortoises',short:'Tortoises',day:'Thursday',abbr:'TT',group:'Program graduates',c:'#2b9a64',d:'#1a6a43',l:'#d8f3e5',mascot:'tortoise',mascotName:'Shelly the Tortoise'},
+  ml:{id:'ml',name:'Monday Maple Leaves',short:'Maple Leaves',day:'Monday',abbr:'ML',group:'At-home group',c:'#d63447',d:'#9c1f30',l:'#fde0e4',mascot:'leaf',mascotName:'Sap the Leaf'},
+  ww:{id:'ww',name:'Wednesday Wrens',short:'Wrens',day:'Wednesday',abbr:'WW',group:'Cancer rehab group',c:'#6c52cc',d:'#46339a',l:'#e8e2fb',mascot:'wren',mascotName:'Pip the Wren'}
+};
+const FIXTURES=[['tb','tt'],['ww','ml']];
+const rivalOf=t=>{for(const [a,b] of FIXTURES){if(a===t)return b;if(b===t)return a}return 'tt'};
+const M=(id,name,team,skin,hair,hairC,glasses,dose,zone)=>({id,name,first:name.split(' ')[0],team,skin,hair,hairC,glasses,dose,zone});
+const MEMBERS={
+  tb:[M('margaret','Margaret O.','tb','#f2c9a5','bun','#d8d4cf',true,33.3,90),M('dot','Dot R.','tb','#8d5a3b','curly','#2b2220',false,66.7,88),M('hector','Hector L.','tb','#d9a77c','bald','#bdb6ad',true,33.3,81),M('june','June W.','tb','#f5d3b8','short','#9c9087',false,100,93),M('sam','Sam A.','tb','#b07850','cap','#222',false,0,86)],
+  tt:[M('raj','Raj P.','tt','#a8714a','short','#e4e1dc',true,33.3,85),M('lorraine','Lorraine M.','tt','#f3cfb0','long','#c9b8a3',false,66.7,90),M('bill','Bill T.','tt','#e8b994','bald','#ccc5bd',false,33.3,86),M('agnes','Agnes F.','tt','#f6dcc6','bun','#ece9e4',true,100,92),M('kofi','Kofi D.','tt','#5e3b26','cap','#111',false,33.3,88)],
+  ww:[M('evelyn','Evelyn K.','ww','#eec1a0','long','#a3a09c',true,33.3,87),M('rosa','Rosa V.','ww','#c48a5e','curly','#3a2a22',false,66.7,84),M('marcel','Marcel B.','ww','#f0c8a8','short','#7a6a5e',false,33.3,80),M('ina','Ina S.','ww','#f7dccb','bun','#e0d6ca',false,0,85),M('gord','Gord H.','ww','#dba57d','bald','#c3bcb2',true,66.7,89)],
+  ml:[M('walter','Walter B.','ml','#f0c39e','cap','#ccc',true,33.3,82),M('pat','Pat N.','ml','#e6b48c','short','#5a4a3e',false,33.3,78),M('deepa','Deepa K.','ml','#9a6440','long','#1f1a18',false,66.7,86),M('lou','Lou C.','ml','#f3d0b5','curly','#d6d0c8',true,0,80),M('fern','Fern G.','ml','#c99067','bun','#b8b0a6',false,33.3,80)]
+};
+const ALL=Object.values(MEMBERS).flat();
+const byId=id=>ALL.find(m=>m.id===id);
+const PLAYERS={
+  margaret:{age:71,note:'Stroke recovery',zone:[92,112],rest:70,instructor:'Priya',home:false,
+    plan:{walk:{min:15,range:[100,115]},cycle:{min:15,range:[50,65]},curl:{reps:20,sets:'2 sets of 10',weight:'3 lb',range:[2,4]}}},
+  raj:{age:68,note:'Program graduate',zone:[105,128],rest:64,instructor:'Priya',home:false,
+    plan:{walk:{min:20,range:[110,125]},cycle:{min:20,range:[60,75]},curl:{reps:30,sets:'3 sets of 10',weight:'8 lb',range:[2,4]}}},
+  evelyn:{age:74,note:'In cancer treatment, gentle dose',zone:[88,106],rest:74,instructor:'Marcus',home:false,
+    plan:{walk:{min:12,range:[100,112]},cycle:{min:12,range:[50,60]},curl:{reps:16,sets:'2 sets of 8',weight:'2 lb',range:[2,4]}}},
+  walter:{age:79,note:'Exercising at home',zone:[90,110],rest:68,instructor:'Priya',home:true,
+    plan:{walk:{min:15,range:[100,112]},cycle:{min:15,range:[50,62]},curl:{reps:20,sets:'2 sets of 10',weight:'4 lb',range:[2,4]}}}
+};
+const WORK={
+  walk:{label:'Walk or jog',verb:'Walking',band:'Lower leg, just above the ankle',bandShort:'lower leg',unit:'steps/min',short:'spm',count:'Steps',tempo:'Cadence'},
+  cycle:{label:'Cycling',verb:'Cycling',band:'Lower leg, on the front of the shin',bandShort:'lower leg',unit:'RPM',short:'RPM',count:'Pedal turns',tempo:'Pedal speed'},
+  curl:{label:'Dumbbell curls',verb:'Curls',band:'Wrist of your lifting arm',bandShort:'wrist',unit:'seconds per rep',short:'s/rep',count:'Reps',tempo:'Rep tempo'}
+};
+const TABLE={
+  tb:{p:5,w:3,d:1,l:1,dose:91,zone:84,form:['W','W','D','L','W']},
+  tt:{p:5,w:3,d:0,l:2,dose:88,zone:87,form:['L','W','W','W','L']},
+  ww:{p:5,w:2,d:1,l:2,dose:86,zone:80,form:['W','L','D','W','L']},
+  ml:{p:5,w:1,d:0,l:4,dose:79,zone:76,form:['L','L','W','L','L']}
+};
+let week=6, weekDone=false;
+const FEED=[];
+
+/* ---------- art ---------- */
+function avatarSVG(m,size,cheer){
+  size=size||56;const t=TEAMS[m.team];const hc=m.hairC||'#6b4a33';let hb='',hf='';
+  switch(m.hair){
+    case 'bun':hb=`<circle cx="50" cy="12" r="11" fill="${hc}"/>`;hf=`<path d="M24 38 Q24 12 50 12 Q76 12 76 38 Q68 22 50 23 Q32 22 24 38Z" fill="${hc}"/>`;break;
+    case 'short':hf=`<path d="M24 38 Q22 10 50 11 Q78 10 76 38 Q72 24 61 22 Q50 30 38 23 Q28 26 24 38Z" fill="${hc}"/>`;break;
+    case 'bald':hf=`<path d="M24 44 Q22 32 28 28 L30 44Z M76 44 Q78 32 72 28 L70 44Z" fill="${hc}"/>`;break;
+    case 'curly':hf=`<g fill="${hc}"><circle cx="30" cy="26" r="9"/><circle cx="42" cy="17" r="10"/><circle cx="58" cy="17" r="10"/><circle cx="70" cy="26" r="9"/><circle cx="50" cy="14" r="9"/></g>`;break;
+    case 'long':hb=`<path d="M22 40 Q20 10 50 10 Q80 10 78 40 L80 66 Q70 62 70 48 L30 48 Q30 62 20 66Z" fill="${hc}"/>`;hf=`<path d="M25 34 Q30 13 50 13 Q70 13 75 34 Q62 23 50 25 Q38 23 25 34Z" fill="${hc}"/>`;break;
+    case 'cap':hf=`<path d="M23 33 Q25 9 50 9 Q75 9 77 33Z" fill="${t.c}"/><path d="M52 29 L90 31 Q88 37 76 37 L52 34Z" fill="${t.d}"/>`;break;
+  }
+  const gl=m.glasses?`<g fill="none" stroke="#33465a" stroke-width="2.6"><circle cx="41" cy="40" r="7.5"/><circle cx="59" cy="40" r="7.5"/><path d="M48.5 40 L51.5 40"/></g>`:'';
+  const arms=cheer?`<path d="M30 78 L14 48 M70 78 L86 48" stroke="${t.c}" stroke-width="11" stroke-linecap="round"/><circle cx="14" cy="46" r="7" fill="${m.skin}"/><circle cx="86" cy="46" r="7" fill="${m.skin}"/>`:'';
+  return `<svg viewBox="0 0 100 120" width="${size}" height="${Math.round(size*1.2)}" aria-hidden="true">${arms}<rect x="24" y="62" width="52" height="56" rx="26" fill="${t.c}"/><path d="M36 64 L50 79 L64 64" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round" opacity=".85"/>${hb}<circle cx="50" cy="38" r="26" fill="${m.skin}"/>${hf}<ellipse cx="41" cy="40" rx="3.2" ry="4" fill="#1d2a36"/><ellipse cx="59" cy="40" rx="3.2" ry="4" fill="#1d2a36"/>${gl}<circle cx="34" cy="50" r="4.5" fill="#f07a7a" opacity=".35"/><circle cx="66" cy="50" r="4.5" fill="#f07a7a" opacity=".35"/><path d="M42 51 Q50 58 58 51" fill="none" stroke="#1d2a36" stroke-width="3" stroke-linecap="round"/></svg>`;
+}
+function mascotSVG(kind,size){
+  size=size||80;let g='';const eyes=(y)=>`<ellipse cx="40" cy="${y}" rx="4.5" ry="5.5" fill="#1d2a36"/><ellipse cx="60" cy="${y}" rx="4.5" ry="5.5" fill="#1d2a36"/>`;
+  if(kind==='fox')g=`<path d="M18 34 L28 4 L46 26Z M82 34 L72 4 L54 26Z" fill="#ef6c2b"/><path d="M25 27 L29 13 L38 25Z M75 27 L71 13 L62 25Z" fill="#5a2a12"/><circle cx="50" cy="55" r="36" fill="#ef6c2b"/><path d="M18 60 Q50 42 82 60 Q78 90 50 91 Q22 90 18 60Z" fill="#fff3ea"/>${eyes(52)}<ellipse cx="50" cy="66" rx="6.5" ry="4.8" fill="#1d2a36"/><path d="M42 74 Q50 80 58 74" fill="none" stroke="#1d2a36" stroke-width="3" stroke-linecap="round"/>`;
+  else if(kind==='tortoise')g=`<ellipse cx="24" cy="82" rx="9" ry="7" fill="#8bc96b"/><ellipse cx="64" cy="82" rx="9" ry="7" fill="#8bc96b"/><circle cx="80" cy="56" r="15" fill="#8bc96b"/><circle cx="84" cy="52" r="3.4" fill="#1d2a36"/><path d="M78 62 Q84 66 90 61" stroke="#1d2a36" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M6 78 Q8 26 44 24 Q74 26 74 78Z" fill="#2b9a64"/><path d="M40 34 L52 40 L52 54 L40 60 L28 54 L28 40Z" fill="#5cc28a"/><path d="M14 68 L22 54 L28 56 L28 72Z M56 56 L64 58 L68 72 L54 72Z" fill="#5cc28a" opacity=".8"/><rect x="4" y="74" width="72" height="8" rx="4" fill="#1a6a43"/>`;
+  else if(kind==='leaf')g=`<polygon points="50,4 57,22 67,15 64,36 81,26 77,41 94,40 81,53 87,59 65,63 67,73 54,67 53,96 47,96 46,67 33,73 35,63 13,59 19,53 6,40 23,41 19,26 36,36 33,15 43,22" fill="#d63447" stroke="#9c1f30" stroke-width="2" stroke-linejoin="round"/>${eyes(44)}<path d="M41 54 Q50 61 59 54" fill="none" stroke="#1d2a36" stroke-width="3" stroke-linecap="round"/>`;
+  else g=`<path d="M68 42 L95 14 L91 46Z" fill="#46339a"/><circle cx="46" cy="56" r="34" fill="#6c52cc"/><ellipse cx="44" cy="72" rx="22" ry="15" fill="#e2d9fc"/><path d="M54 50 Q80 54 72 74 Q56 70 54 50Z" fill="#46339a"/><path d="M14 46 L1 52 L14 57Z" fill="#f4b223"/><circle cx="28" cy="44" r="5.5" fill="#1d2a36"/><circle cx="29.8" cy="42.2" r="1.8" fill="#fff"/>`;
+  return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true">${g}</svg>`;
+}
+function pennantSVG(t,w){w=w||56;const T=TEAMS[t];return `<svg viewBox="0 0 64 40" width="${w}" height="${Math.round(w*40/64)}" aria-hidden="true"><rect x="1" y="0" width="4" height="40" rx="2" fill="#8a6a44"/><path d="M5 3 L62 20 L5 37Z" fill="${T.c}"/><path d="M5 3 L62 20 L5 10Z" fill="#fff" opacity=".22"/><text x="15" y="24.5" font-family="Fredoka, sans-serif" font-weight="700" font-size="12.5" fill="#fff">${T.abbr}</text></svg>`;}
+function figureSVG(w,team,skin){
+  const T=TEAMS[team],ink='#29435a',pants='#3d5a80';
+  const band=(x,y,r)=>`<g transform="translate(${x} ${y}) rotate(${r})"><circle r="17" fill="#f4b223" class="band-pulse"/><rect x="-12" y="-6.5" width="24" height="13" rx="5" fill="#f4b223" stroke="${ink}" stroke-width="2.5"/><circle cx="0" cy="0" r="2.8" fill="#e53b3b"/></g>`;
+  const ln=(d,c,wd)=>`<path d="${d}" fill="none" stroke="${c}" stroke-width="${wd||13}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const head=(x,y)=>`<circle cx="${x}" cy="${y}" r="19" fill="${skin}"/><circle cx="${x-6}" cy="${y}" r="2.4" fill="#1d2a36"/><circle cx="${x+6}" cy="${y}" r="2.4" fill="#1d2a36"/><path d="M${x-6} ${y+7} Q${x} ${y+12} ${x+6} ${y+7}" fill="none" stroke="#1d2a36" stroke-width="2.4" stroke-linecap="round"/>`;
+  let s='';
+  if(w==='walk')s=`<ellipse cx="80" cy="160" rx="56" ry="6" fill="#3a8a2a" opacity=".25"/>${ln('M74 104 L64 130 L54 154',pants)}${ln('M86 104 L96 130 L108 152',pants)}<ellipse cx="50" cy="156" rx="10" ry="5" fill="${ink}"/><ellipse cx="114" cy="154" rx="10" ry="5" fill="${ink}"/>${ln('M66 62 L52 84 L60 100',skin,10)}<rect x="58" y="46" width="44" height="64" rx="22" fill="${T.c}"/>${ln('M96 62 L110 80 L118 70',skin,10)}${head(80,28)}${band(102,141,-30)}`;
+  else if(w==='cycle')s=`<ellipse cx="82" cy="164" rx="66" ry="5" fill="#3a8a2a" opacity=".25"/><g fill="none" stroke="${ink}" stroke-width="5"><circle cx="38" cy="136" r="24"/><circle cx="128" cy="136" r="24"/></g><path d="M38 136 L72 136 L100 98 L58 100 Z M72 136 L58 100 M100 98 L128 136 M100 98 L104 84 L116 82 M58 100 L54 90" fill="none" stroke="#1f8ee0" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><rect x="44" y="86" width="22" height="7" rx="3.5" fill="${ink}"/>${ln('M60 88 L88 112 L76 138',pants)}<path d="M58 92 L92 54" stroke="${T.c}" stroke-width="30" stroke-linecap="round"/>${ln('M90 60 L112 84',skin,10)}${head(100,38)}${band(82,125,30)}`;
+  else s=`<ellipse cx="80" cy="160" rx="50" ry="6" fill="#3a8a2a" opacity=".25"/>${ln('M72 106 L70 154',pants)}${ln('M88 106 L90 154',pants)}<ellipse cx="66" cy="157" rx="10" ry="5" fill="${ink}"/><ellipse cx="94" cy="157" rx="10" ry="5" fill="${ink}"/>${ln('M64 62 L56 90 L58 110',skin,10)}<rect x="58" y="46" width="44" height="64" rx="22" fill="${T.c}"/>${ln('M98 60 L110 92 L120 66',skin,10)}<g transform="translate(122 60) rotate(-20)"><rect x="-14" y="-3" width="28" height="6" rx="3" fill="${ink}"/><rect x="-20" y="-10" width="9" height="20" rx="3" fill="#5a6f82"/><rect x="11" y="-10" width="9" height="20" rx="3" fill="#5a6f82"/></g>${head(80,28)}${band(117,76,-70)}`;
+  return `<svg viewBox="0 0 160 170" role="img" aria-label="Band placement: ${WORK[w].band}">${s}</svg>`;
+}
+const TROPHY=(id)=>`<svg viewBox="0 0 200 230" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="#c98400"/><stop offset=".35" stop-color="#ffe38a"/><stop offset=".6" stop-color="#f4b223"/><stop offset="1" stop-color="#b97b00"/></linearGradient></defs><path d="M46 40 Q8 40 14 78 Q20 112 64 112" fill="none" stroke="url(#${id})" stroke-width="14" stroke-linecap="round"/><path d="M154 40 Q192 40 186 78 Q180 112 136 112" fill="none" stroke="url(#${id})" stroke-width="14" stroke-linecap="round"/><path d="M40 22 L160 22 Q160 120 100 138 Q40 120 40 22Z" fill="url(#${id})"/><ellipse cx="100" cy="22" rx="60" ry="9" fill="#ffe9a6"/><path d="M70 40 Q72 92 92 118" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".55"/><rect x="88" y="136" width="24" height="34" fill="url(#${id})"/><rect x="60" y="168" width="80" height="18" rx="6" fill="url(#${id})"/><rect x="48" y="184" width="104" height="38" rx="8" fill="#6b3f1d"/><rect x="66" y="193" width="68" height="20" rx="4" fill="#ffe38a"/><text x="100" y="208" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="700" font-size="13" fill="#6b3f1d" class="trPlate">WEEK ${week}</text><path d="M100 50 L106 64 L121 65 L109 74 L113 89 L100 80 L87 89 L91 74 L79 65 L94 64Z" fill="#fff6cf"/></svg>`;
+const STAR=on=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2 6.1 20.4l1.3-6.5L2.5 9.3l6.6-.8z" fill="${on?'#f4b223':'#e1eaf2'}" stroke="${on?'#b97b00':'#c4d3df'}" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+const ICON={good:'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',warn:'<svg viewBox="0 0 24 24"><path d="M12 6v8M12 18v.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg>',info:'<svg viewBox="0 0 24 24"><path d="M6 14l6-6 6 6" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'};
+ICON.bad=ICON.warn;
+
+/* ---------- sound ---------- */
+let AC=null,muted=false;
+function initAudio(){if(AC||muted)return;try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){AC=null}}
+function tone(f,dur,type,vol,when,f2){if(!AC||muted)return;try{const t0=AC.currentTime+(when||0);const o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t0);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t0+dur);g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol||.12,t0+.015);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);o.connect(g).connect(AC.destination);o.start(t0);o.stop(t0+dur+.05)}catch(e){}}
+const SFX={
+  coin(){tone(1175,.07,'square',.035);tone(1568,.14,'square',.035,.06)},
+  chime(){[523,659,784,1047].forEach((f,i)=>tone(f,.35,'triangle',.11,i*.1))},
+  whistle(){tone(2200,.18,'sine',.08,0,2500);tone(2300,.4,'sine',.08,.22,2100)},
+  alert(){tone(523,.35,'sine',.13);tone(392,.5,'sine',.13,.35)},
+  pull(){tone(180,.09,'triangle',.1,0,120)},
+  cheer(){[659,784,988].forEach((f,i)=>tone(f,.2,'triangle',.08,i*.07))},
+  fanfare(){[523,523,659,784,659,784,1047].forEach((f,i)=>tone(f,i===6?.7:.18,'triangle',.12,i*.15))}
+};
+document.addEventListener('pointerdown',initAudio,{once:false,passive:true});
+document.addEventListener('keydown',initAudio,{passive:true});
+$('#soundBtn').addEventListener('click',()=>{muted=!muted;$('#soundBtn').textContent='Sound: '+(muted?'Off':'On');$('#soundBtn').setAttribute('aria-pressed',String(!muted));if(!muted){initAudio();SFX.coin()}});
+
+/* ---------- helpers ---------- */
+function toast(txt){const el=document.createElement('div');el.className='toast';el.textContent=txt;$('#toast').appendChild(el);setTimeout(()=>el.remove(),3200);while($('#toast').children.length>3)$('#toast').firstChild.remove();}
+function pushFeed(txt,team){FEED.unshift({txt,team});if(FEED.length>30)FEED.pop();feedDirty=true;}
+let feedDirty=true;
+function teamStyle(t){const T=TEAMS[t];return `--c:${T.c};--d:${T.d};--l:${T.l}`}
+
+/* ---------- scoring ---------- */
+let S=null, lastSum=null, speed=1, pace='steady';
+function sessPct(){if(!S)return 0;const pl=S.p.plan[S.w];return S.w==='curl'?Math.min(100,S.count/pl.reps*100):Math.min(100,S.active/(pl.min*60)*100)}
+function sessZone(){return S&&S.active>0?S.zone/S.active*100:0}
+function mDose(m){if(S&&S.pid===m.id)return Math.min(100,m.dose+sessPct()/3);return m.dose}
+function mZone(m){if(S&&S.pid===m.id&&S.active>1){const sd=sessPct()/3;return (m.zone*m.dose+sessZone()*sd)/((m.dose+sd)||1)}return m.zone}
+function mPts(m){return mDose(m)*mZone(m)/100}
+function teamScore(t){const a=MEMBERS[t];return a.reduce((s,m)=>s+mPts(m),0)/a.length}
+function teamDose(t){const a=MEMBERS[t];return a.reduce((s,m)=>s+mDose(m),0)/a.length}
+function teamZone(t){const a=MEMBERS[t].filter(m=>mDose(m)>0);return a.length?a.reduce((s,m)=>s+mZone(m),0)/a.length:0}
+function myTeam(){return S?S.member.team:(lastSum?lastSum.team:'tb')}
+function sessionsDone(m){return Math.floor(mDose(m)/33.3+0.001)}
+
+/* ---------- routing ---------- */
+let view='home';
+function show(v){
+  view=v;['home','workout','live','summary','match','standings'].forEach(k=>{$('#v-'+k).hidden=k!==v});
+  $$('.tab[data-go]').forEach(b=>{const on=b.dataset.go===v||(v==='workout'&&b.dataset.go==='home');on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')});
+  if(v==='home')renderHome();
+  if(v==='match')buildMatch();
+  if(v==='standings')renderStandings();
+  if(v==='live'){buildLive();sizeTrace()}
+  window.scrollTo({top:0,behavior:RM?'auto':'smooth'});
+}
+document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){show(g.dataset.go)}});
+$('#logoBtn').addEventListener('click',()=>show('home'));
+
+/* ---------- static chrome ---------- */
+$('#logoPennant').innerHTML=pennantSVG('tb',46).replace('>TB<','>LN<');
+(function(){const cols=['#ef6c2b','#f4b223','#2b9a64','#1f8ee0','#6c52cc','#d63447'];let h='';for(let i=0;i<80;i++)h+=`<span style="background:${cols[i%cols.length]}"></span>`;$('#bunting').innerHTML=h})();
+
+function bannerHTML(t){const T=TEAMS[t];return `<div class="banner" style="${teamStyle(t)}"><div class="banner-pole"></div><div class="banner-cloth"><div class="banner-mascot">${mascotSVG(T.mascot,70)}</div><div class="banner-day">${T.day}</div><div class="banner-name">${T.short}</div></div><div class="banner-group">${T.group}</div></div>`}
+function versusHTML(a,b){return `<div class="versus">${bannerHTML(a)}<div class="vs-mid"><span class="vs-tag">VS</span><div class="sb"><span class="sb-num" data-score="${a}">0</span><span class="sb-dash">–</span><span class="sb-num" data-score="${b}">0</span></div><div class="vs-label">Live score<br>ends Sunday 6 pm</div></div>${bannerHTML(b)}</div>`}
+function totemHTML(t,sm){const T=TEAMS[t];return `<div class="totem${sm?' sm':''}" data-team="${t}" style="${teamStyle(t)}"><div class="totem-pole"><div class="totem-track"><div class="totem-fill"></div><div class="totem-ticks"></div></div><div class="totem-head">${mascotSVG(T.mascot,60)}</div></div><div class="totem-score num">0</div><div class="totem-name">${T.short}</div></div>`}
+function updateScores(){
+  $$('[data-score]').forEach(el=>{el.textContent=teamScore(el.dataset.score).toFixed(1)});
+  $$('.totem').forEach(el=>{const s=clamp(teamScore(el.dataset.team),0,100);el.querySelector('.totem-fill').style.height=s+'%';el.querySelector('.totem-head').style.bottom=s+'%';el.querySelector('.totem-score').textContent=s.toFixed(1)});
+}
+
+/* ---------- home ---------- */
+function renderHome(){
+  $('#homeVersus').innerHTML=versusHTML('tb','tt');
+  $('#otherMatch').innerHTML=versusHTML('ww','ml');
+  $('#weekLabel').textContent=`Week ${week} of 8 · Autumn League`;
+  $('#playerGrid').innerHTML=Object.keys(PLAYERS).map(id=>{const m=byId(id),p=PLAYERS[id],T=TEAMS[m.team];const n=sessionsDone(m);
+    return `<button class="pcard" data-player="${id}" style="${teamStyle(m.team)}"><div class="pav">${avatarSVG(m,70)}</div><div class="pname">${m.name}</div><div class="pmeta">${p.age} · ${p.note}<br><span class="chip">${pennantSVG(m.team,28)} ${T.short}</span></div><div class="pfoot"><span>Zone <b class="num">${p.zone[0]}–${p.zone[1]}</b> bpm</span><span class="dots" aria-label="${n} of 3 sessions this week">${[0,1,2].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}</span></div></button>`}).join('');
+  updateScores();renderFeed('#homeFeed',5);
+}
+$('#playerGrid').addEventListener('click',e=>{const c=e.target.closest('[data-player]');if(c)pickPlayer(c.dataset.player)});
+
+let chosen='margaret';
+function pickPlayer(id){
+  chosen=id;const m=byId(id),p=PLAYERS[id],T=TEAMS[m.team];
+  $('#wkWho').innerHTML=`<div class="pav" style="${teamStyle(m.team)}">${avatarSVG(m,64)}</div><div><div class="eyebrow">${T.name}</div><h1 id="wkH">${m.first}, pick tonight's event</h1></div>`;
+  $('#wkLede').textContent=`Your kinesiologist set these doses for you. Finish one, and it adds a third of your weekly dose to the ${T.short}' total. Your safe heart-rate zone is ${p.zone[0]} to ${p.zone[1]} beats per minute.`;
+  $('#eventGrid').innerHTML=['walk','cycle','curl'].map(w=>{const pl=p.plan[w],W=WORK[w];
+    const dose=w==='curl'?`<b>${pl.sets}</b> with ${pl.weight}, <b>2–4 seconds</b> per rep`:`<b>${pl.min} minutes</b> at <b>${pl.range[0]}–${pl.range[1]} ${W.unit}</b>`;
+    return `<div class="card event"><h3>${W.label}</h3><div class="fig">${figureSVG(w,m.team,m.skin)}</div><div class="band-where"><span><b>Band goes on:</b> ${W.band}</span></div><p class="dose-line">Tonight's dose: ${dose}</p><button class="btn btn-blue" data-start="${w}">Start ${W.label.toLowerCase()}</button></div>`}).join('');
+  show('workout');
+}
+$('#eventGrid').addEventListener('click',e=>{const b=e.target.closest('[data-start]');if(b)startSession(chosen,b.dataset.start)});
+
+/* ---------- session ---------- */
+const buf={x:[],y:[],z:[]};const BUFN=200;
+function startSession(pid,w,prewarm){
+  const p=PLAYERS[pid],m=byId(pid);
+  S={pid,p,w,member:m,t:0,active:0,zone:0,above:0,below:0,hr:p.rest+4,spo2:97.6,rate:0,phase:0,count:0,paused:false,alert:null,breathers:0,coins:0,lastPct:0,samples:[],sampT:0,doneShown:false,ev:{},overT:0,coinQ:0,impulse:0,helpCalled:false};
+  if(prewarm){S.hr=(p.zone[0]+p.zone[1])/2;S.rate=rateFor(w,p.plan[w].range,'steady');S.t=60}
+  buf.x=[];buf.y=[];buf.z=[];setPace('steady');
+  show('live');SFX.whistle();
+  toast(`Kick-off! ${m.first} is ${WORK[w].verb.toLowerCase()} for the ${TEAMS[m.team].short}.`);
+  pushFeed(`${m.first} started ${WORK[w].label.toLowerCase()}`,m.team);
+}
+function rateFor(w,r,pc){
+  if(w==='curl'){const per={easy:4.8,steady:3.0,push:1.4}[pc];return 60/per}
+  const [lo,hi]=r;const mid=(lo+hi)/2;
+  return {easy:lo-(w==='walk'?9:7),steady:mid,push:hi+(w==='walk'?16:14)}[pc];
+}
+const minMove={walk:60,cycle:25,curl:6};
+function tempoState(){ // 'ok' | 'fast' | 'slow' | 'still'
+  const r=S.p.plan[S.w].range;if(S.rate<minMove[S.w])return 'still';
+  if(S.w==='curl'){const per=60/S.rate;return per<r[0]-0.1?'fast':per>r[1]+0.1?'slow':'ok'}
+  return S.rate>r[1]+2?'fast':S.rate<r[0]-2?'slow':'ok';
+}
+function tempoQuality(){
+  if(!S||S.rate<minMove[S.w])return 0;const r=S.p.plan[S.w].range;
+  if(S.w==='curl'){const per=60/S.rate;const d=per<r[0]?r[0]-per:per>r[1]?per-r[1]:0;return clamp(1-d/1.5,0,1)}
+  const d=S.rate<r[0]?r[0]-S.rate:S.rate>r[1]?S.rate-r[1]:0;return clamp(1-d/15,0,1);
+}
+function inZone(){return S&&S.hr>=S.p.zone[0]&&S.hr<=S.p.zone[1]}
+function canPull(){return !!S&&!S.alert&&!S.paused&&S.rate>=minMove[S.w]&&inZone()}
+
+function stepSession(dt,dtR,now){
+  const p=S.p,pl=p.plan[S.w],lo=p.zone[0],hi=p.zone[1],mid=(lo+hi)/2;
+  const resting=S.paused||!!S.alert;
+  const target=resting?0:rateFor(S.w,pl.range,pace);
+  S.rate+=(target-S.rate)*(1-Math.exp(-dt/(S.w==='curl'?1.2:2.5)));
+  if(!resting&&S.rate>minMove[S.w])S.rate+=(Math.random()-.5)*(S.w==='curl'?.6:1.6)*Math.min(1,dt*4);
+  if(S.rate<0.5&&resting)S.rate=0;
+  S.phase+=S.rate/60*dt;
+  while(S.phase>=1){S.phase-=1;S.count++}
+  const moving=S.rate>=minMove[S.w];
+  const k=resting?0:{easy:.6,steady:1,push:1.42}[pace];
+  let hrT=p.rest+(mid-p.rest)*k*(moving?1:.25),tau=16,dV=S.alert?Math.max(dt,dtR*5):dt;
+  if(S.ev.hr&&now<S.ev.hr){hrT=hi+50;tau=2.5;dV=Math.max(dt,dtR*2)}
+  S.hr+=(hrT-S.hr)*(1-Math.exp(-dV/tau));
+  let spT=moving?97:97.8,tauS=5;
+  if(S.ev.sp&&now<S.ev.sp){spT=87.8;tauS=1.6;dV=Math.max(dV,dtR*2)}
+  S.spo2+=(spT-S.spo2)*(1-Math.exp(-dV/tauS));
+  if(!S.alert){if(S.spo2<92)raiseAlert('spo2');else if(S.hr>hi+25)raiseAlert('hr')}
+  S.t+=dt;
+  if(moving&&!resting){S.active+=dt;if(S.hr>=lo&&S.hr<=hi)S.zone+=dt;else if(S.hr>hi)S.above+=dt;else S.below+=dt;
+    S.sampT+=dt;if(S.sampT>2){S.sampT=0;S.samples.push(S.rate)}}
+  S.overT=S.hr>hi&&!resting?S.overT+dt:0;
+  const pct=sessPct();
+  if(pct-S.lastPct>=1){const n=Math.floor(pct-S.lastPct);S.lastPct+=n;S.coinQ+=n;S.coins+=n}
+  if(pct>=100&&!S.doneShown){S.doneShown=true;SFX.chime();toast(`Dose complete! ${S.member.first} added a full session to the ${TEAMS[S.member.team].short}.`);pushFeed(`${S.member.first} finished tonight's ${WORK[S.w].label.toLowerCase()}`,S.member.team)}
+}
+let coinT=0;
+function flushCoins(dtR){
+  coinT+=dtR;if(!S||S.coinQ<=0||coinT<.22)return;coinT=0;S.coinQ--;
+  if(view!=='live')return;
+  const from=$('#ringWrap'),to=document.querySelector(`#liveTotems .totem[data-team="${S.member.team}"] .totem-head`);
+  if(!from||!to)return;SFX.coin();
+  if(RM||!from.animate){to.classList.remove('pop');void to.offsetWidth;to.classList.add('pop');return}
+  const a=from.getBoundingClientRect(),b=to.getBoundingClientRect();
+  const x0=a.left+a.width/2+rnd(-30,30),y0=a.top+a.height/2,x1=b.left+b.width/2,y1=b.top+b.height/2;
+  const c=document.createElement('div');c.className='coin';document.body.appendChild(c);
+  const mx=(x0+x1)/2,my=Math.min(y0,y1)-80;
+  const an=c.animate([{transform:`translate(${x0}px,${y0}px) scale(.6)`},{transform:`translate(${mx}px,${my}px) scale(1.1)`,offset:.5},{transform:`translate(${x1}px,${y1}px) scale(.5)`,opacity:.6}],{duration:850,easing:'ease-in-out'});
+  an.onfinish=()=>{c.remove();to.classList.remove('pop');void to.offsetWidth;to.classList.add('pop')};
+}
+
+/* accelerometer sim, 50 Hz */
+let accAcc=0,realPh=0,lastSpace=-9;
+function genAccel(dtR,now){
+  accAcc+=dtR;
+  while(accAcc>=0.02){accAcc-=0.02;
+    let x,y,z;const n=()=>(Math.random()-.5)*.06;
+    const w=S?S.w:'walk';const r=S?S.rate:0;
+    realPh+=(r/60)*0.02;
+    const ph=realPh*2*Math.PI;const amp=S?clamp(r/(minMove[w]*1.6),0,1):0;
+    if(w==='walk'){z=1+amp*(.55*Math.sin(ph)+.18*Math.sin(2*ph))+n();x=amp*.28*Math.sin(ph/2)+n();y=amp*.15*Math.cos(ph)+n()}
+    else if(w==='cycle'){x=amp*.55*Math.cos(ph)+n();y=amp*.55*Math.sin(ph)+n();z=.92+amp*.1*Math.sin(ph)+n()}
+    else{const th=amp*Math.PI/2*(1-Math.cos(ph))*.95;x=Math.cos(th)*.98+n();z=Math.sin(th)*.98+n();y=.08*amp*Math.sin(ph*2)+n()}
+    if(now-lastSpace<120){z+=.9;x-=.4}
+    buf.x.push(x);buf.y.push(y);buf.z.push(z);
+    if(buf.x.length>BUFN){buf.x.shift();buf.y.shift();buf.z.shift()}
+  }
+}
+let traceCtx=null,traceW=0,traceH=120;
+function sizeTrace(){const c=$('#trace');if(!c)return;const dpr=window.devicePixelRatio||1;traceW=c.clientWidth||600;c.width=traceW*dpr;c.height=traceH*dpr;traceCtx=c.getContext('2d');traceCtx.setTransform(dpr,0,0,dpr,0,0)}
+function drawTrace(){
+  const g=traceCtx;if(!g||!traceW)return;g.clearRect(0,0,traceW,traceH);
+  const yOf=v=>traceH-8-((v+1.2)/3.2)*(traceH-16);
+  g.strokeStyle='rgba(207,227,243,.18)';g.lineWidth=1;g.font='12px Atkinson Hyperlegible, sans-serif';g.fillStyle='rgba(207,227,243,.7)';
+  [-1,0,1,2].forEach(v=>{const y=yOf(v);g.beginPath();g.moveTo(28,y);g.lineTo(traceW,y);g.stroke();g.fillText((v>0?'+':'')+v+'g',0,y+4)});
+  const draw=(a,col)=>{g.strokeStyle=col;g.lineWidth=2.2;g.beginPath();const n=a.length;for(let i=0;i<n;i++){const X=28+(i/(BUFN-1))*(traceW-30),Y=yOf(a[i]);i?g.lineTo(X,Y):g.moveTo(X,Y)}g.stroke();if(n){g.fillStyle=col;g.beginPath();g.arc(28+((n-1)/(BUFN-1))*(traceW-30),yOf(a[n-1]),3.5,0,7);g.fill()}};
+  draw(buf.x,'#ff8a7a');draw(buf.y,'#7fe08a');draw(buf.z,'#7cc4ff');
+}
+window.addEventListener('resize',()=>{sizeTrace();if(TUG.on)sizeTug()});
+
+/* ---------- live view ---------- */
+function buildLive(){
+  if(!S){startSession('margaret','walk');return}
+  const m=S.member,T=TEAMS[m.team],R=rivalOf(m.team),W=WORK[S.w],p=S.p,pl=p.plan[S.w];
+  $('#liveScorebar').innerHTML=`<span class="live-dot">LIVE</span><span class="side">${pennantSVG(m.team,40)} ${T.short}</span><span class="sb-num" data-score="${m.team}">0</span><span class="sb-dash">–</span><span class="sb-num" data-score="${R}">0</span><span class="side">${TEAMS[R].short} ${pennantSVG(R,40)}</span>`;
+  $('#liveWho').innerHTML=`<div class="pav" style="${teamStyle(m.team)}">${avatarSVG(m,52)}</div><div><div class="eyebrow">${W.verb} · band on ${W.bandShort}</div><h2 id="liveH">${m.name}</h2></div><span class="clock" id="clock">0:00</span>`;
+  $('#liveTotems').innerHTML=totemHTML(m.team,true)+totemHTML(R,true);
+  $('#tpLab').textContent=W.tempo;$('#tpUnit').textContent=W.short;
+  $('#tpSub').textContent=S.w==='curl'?`Aim ${pl.range[0]}–${pl.range[1]} s up and down`:`Aim ${pl.range[0]}–${pl.range[1]}`;
+  $('#ctLab').textContent=W.count;$('#ctSub').textContent=S.w==='curl'?`Goal: ${pl.sets}`:'Counted by your band';
+  $('#ringSub').textContent=S.w==='curl'?`of ${pl.reps} reps`:`of ${pl.min} min`;
+  $('#traceWhere').textContent=W.bandShort;
+  const lo=p.zone[0],hi=p.zone[1],X=v=>clamp((v-50)/120*100,0,100);
+  $('#zband').style.left=X(lo)+'%';$('#zband').style.width=(X(hi)-X(lo))+'%';
+  $('#zlabels').innerHTML=`<span style="left:${X(lo)}%">${lo}</span><span style="left:${X(hi)}%">${hi}</span>`;
+  $('#zoneTxt').textContent=`Your zone ${lo}–${hi}`;
+  $('#liveMates').innerHTML=MEMBERS[m.team].map(x=>`<li style="${teamStyle(x.team)}" data-mid="${x.id}">${avatarSVG(x,32)}<div><div>${x.id===m.id?'You':x.name}</div><div class="bar"><i style="width:0%"></i></div></div><span class="num pct">0%</span></li>`).join('');
+  updateScores();renderLive();
+}
+function coachMsg(){
+  const p=S.p,lo=p.zone[0],hi=p.zone[1],T=TEAMS[S.member.team],r=p.plan[S.w].range,ts=tempoState(),hr=Math.round(S.hr);
+  if(S.alert)return['bad','Paused for a breather. Your team is holding the rope for you.'];
+  if(S.paused)return['info','Resting. Press Resume when you feel ready.'];
+  if(sessPct()>=100)return['good','Dose complete! Extra time adds no points, so cool down gently and hand in your scorecard.'];
+  if(S.hr>hi&&S.overT>8)return['warn',`Ease off a little. Your heart rate is ${hr}, above your zone of ${lo}–${hi}.`];
+  if(ts==='fast')return['warn',S.w==='curl'?'Slow those curls down. Take 2 to 4 seconds for each one.':`A bit fast. A steady ${r[0]}–${r[1]} ${WORK[S.w].unit} scores best.`];
+  if(S.t<45&&S.hr<lo)return['info','Warming up. Ease into it.'];
+  if(ts==='slow'&&S.w!=='curl')return['info',`A little more pep. Aim for ${r[0]}–${r[1]} ${WORK[S.w].unit}.`];
+  if(ts==='slow')return['info','Nice and controlled. You can go a touch quicker: about 3 seconds a rep.'];
+  if(S.hr<lo)return['info',`Almost there. Your zone starts at ${lo} bpm.`];
+  return['good',`Right in your zone. Every minute here counts for the ${T.short}!`];
+}
+let lastCoach='';
+function renderLive(){
+  if(!S)return;const p=S.p,lo=p.zone[0],hi=p.zone[1];
+  const hrD=Math.round(S.hr+Math.sin(performance.now()/700)*.8);
+  $('#hrVal').textContent=hrD;$('#heartIco').style.setProperty('--beat',(60/Math.max(50,hrD)).toFixed(2)+'s');
+  $('#zmark').style.left=clamp((S.hr-50)/120*100,0,100)+'%';
+  $('#hrStat').className='stat hrstat '+(S.hr>hi+25?'bad':S.hr>hi?'warn':S.hr>=lo?'ok':'');
+  $('#spVal').textContent=S.spo2.toFixed(0);$('#spStat').className='stat '+(S.spo2<92?'bad':S.spo2<94?'warn':'ok');
+  const ts=tempoState();
+  $('#tpVal').textContent=S.rate<minMove[S.w]?'--':S.w==='curl'?(60/S.rate).toFixed(1):Math.round(S.rate);
+  $('#tpStat').className='stat '+(ts==='ok'?'ok':ts==='fast'?'warn':'');
+  $('#ctVal').textContent=S.count;
+  const mm=Math.floor(S.t/60),ss=Math.floor(S.t%60);const ck=$('#clock');if(ck)ck.textContent=mm+':'+String(ss).padStart(2,'0');
+  const pct=sessPct();$('#ringPct').textContent=Math.floor(pct)+'%';$('#ringArc').setAttribute('stroke-dashoffset',(502.65*(1-pct/100)).toFixed(1));
+  $('#coinCt').textContent=S.coins;
+  const [k,msg]=coachMsg();const key=k+msg;if(key!==lastCoach){lastCoach=key;const c=$('#coach');c.className='coach '+k;c.innerHTML=`<span class="ci">${ICON[k]}</span><span>${msg}</span>`}
+  $('#pauseBtn').textContent=S.paused?'Resume':'Take a rest';
+  $$('#liveMates li').forEach(li=>{const m=byId(li.dataset.mid);const d=mDose(m);li.querySelector('.bar i').style.width=d+'%';li.querySelector('.pct').textContent=Math.round(d)+'%'});
+}
+$('#pauseBtn').addEventListener('click',()=>{if(!S||S.alert)return;S.paused=!S.paused;toast(S.paused?'Resting. Rest never costs your team points.':'Back at it!')});
+$('#finishBtn').addEventListener('click',()=>finishSession());
+$('#tugBtn').addEventListener('click',()=>openTug());
+
+/* ---------- safety ---------- */
+const CHEERS=[['Take all the time you need. We have the rope!'],['Breathe easy. Proud of you for stopping.'],['Resting counts too. See you back out there.'],['Sending you a big wave from the bike!']];
+let cheerTimers=[];
+function raiseAlert(kind){
+  setDemo(false);
+  S.alert={kind,t0:performance.now()};S.breathers++;S.paused=false;SFX.alert();
+  const p=S.p,m=S.member;
+  $('#alTitle').textContent=`Let's take a breather, ${m.first}`;
+  $('#alReason').textContent=kind==='spo2'?'Your band shows your blood oxygen dropped below 92%. That can happen when you push hard. Let\'s rest until it comes back up.':`Your heart rate jumped well above your zone of ${p.zone[0]}–${p.zone[1]}. Let's slow right down and let it settle.`;
+  $('#alZone').textContent=`Your zone ${p.zone[0]}–${p.zone[1]}`;
+  $('#alCheers').innerHTML='';$('#alHelpMsg').hidden=true;$('#ovAlert').hidden=false;$('#alResume').disabled=true;
+  pushFeed(`${m.first} is taking a breather. Send some encouragement!`,m.team);
+  cheerTimers.forEach(clearTimeout);cheerTimers=[];
+  const mates=MEMBERS[m.team].filter(x=>x.id!==m.id);
+  [0,1,2].forEach(i=>cheerTimers.push(setTimeout(()=>{if(!S||!S.alert)return;const x=mates[i%mates.length];addCheer(x,CHEERS[i][0])},1400+i*1900)));
+  if(TUG.on)toast('Tug of War: your pulls are paused while you rest.');
+}
+function addCheer(x,txt){const li=document.createElement('li');li.innerHTML=`${avatarSVG(x,32)}<span><b>${x.first}:</b> ${txt}</span>`;$('#alCheers').appendChild(li);SFX.cheer()}
+function renderAlert(){
+  if(!S||!S.alert)return;const p=S.p;
+  $('#alSp').textContent=S.spo2.toFixed(0)+'%';$('#alSpBox').className='vital '+(S.spo2<92?'bad':S.spo2>=94?'ok':'');
+  $('#alHr').textContent=Math.round(S.hr);$('#alHrBox').className='vital '+(S.hr>p.zone[1]+5?'bad':'ok');
+  const now=performance.now();
+  const ok=S.spo2>=94&&S.hr<=p.zone[1]+5&&!(S.ev.sp&&now<S.ev.sp)&&!(S.ev.hr&&now<S.ev.hr)&&now-S.alert.t0>3000;
+  const b=$('#alResume');if(b.disabled===ok){b.disabled=!ok;b.textContent=ok?'I feel better. Resume':'Waiting for your numbers to settle'}
+}
+$('#alResume').addEventListener('click',()=>{if(!S)return;S.alert=null;$('#ovAlert').hidden=true;cheerTimers.forEach(clearTimeout);toast('Welcome back! Start gently.');feedDirty=true;SFX.chime()});
+$('#alHelp').addEventListener('click',()=>{if(!S)return;S.helpCalled=true;const p=S.p;const el=$('#alHelpMsg');el.hidden=false;el.textContent=p.home?`${p.instructor}, your instructor, got an alert with your readings and will phone you in a moment. Stay seated.`:`${p.instructor}, your instructor, got an alert on the tablet and is on the way to you. Stay seated.`});
+$('#alEnd').addEventListener('click',()=>{$('#ovAlert').hidden=true;cheerTimers.forEach(clearTimeout);if(S)S.alert=null;finishSession()});
+
+/* ---------- summary ---------- */
+function finishSession(){
+  if(!S){show('home');return}
+  if(TUG.on)closeTug();
+  const m=S.member,before=teamScore(m.team),pct=sessPct(),zp=sessZone();
+  const samples=S.samples.length>2?S.samples:[S.rate||1,S.rate||1];
+  const mean=samples.reduce((a,b)=>a+b,0)/samples.length,sd=Math.sqrt(samples.reduce((a,b)=>a+(b-mean)*(b-mean),0)/samples.length);
+  const steady=clamp(Math.round(100-(sd/(mean||1))*400),40,100);
+  const z=mZone(m),d=mDose(m);
+  lastSum={pid:S.pid,team:m.team,w:S.w,pct,zp,steady,coins:S.coins,breathers:S.breathers,active:S.active,count:S.count,above:S.above,help:S.helpCalled,beforeScore:before};
+  const pl=S.p.plan[S.w];
+  S=null;m.zone=z;m.dose=d;
+  lastSum.afterScore=teamScore(m.team);
+  pushFeed(`${m.first} handed in a scorecard: ${Math.round(pct)}% of tonight's dose`,m.team);
+  // render
+  const T=TEAMS[m.team];
+  $('#sumH').textContent=pct>=100?`Full dose, ${m.first}!`:pct>=50?`Good effort, ${m.first}`:`Every bit counts, ${m.first}`;
+  $('#sumPct').textContent=Math.round(pct)+'%';$('#sumArc').setAttribute('stroke-dashoffset',(502.65*(1-pct/100)).toFixed(1));
+  const stars=(pct>=100?1:0)+(zp>=75?1:0)+(steady>=80?1:0);
+  $('#sumStars').innerHTML=[0,1,2].map(i=>STAR(i<stars)).join('');
+  $('#sumMsg').textContent=(pct>=100?'You finished the dose your kinesiologist set. ':'You did part of tonight\'s dose. You can finish the rest another day this week. ')+(lastSum.breathers?'You stopped when your body asked you to. That was the right call.':zp>=75?'You stayed in your zone most of the time, which is exactly what scores.':'Next time, try to stay inside your zone a little longer. That is what scores.');
+  const mins=lastSum.active/60;
+  $('#sumTiles').innerHTML=[
+    [Math.round(zp)+'%','of your time in your heart-rate zone'],
+    [lastSum.w==='curl'?lastSum.count+' reps':mins.toFixed(1)+' min',lastSum.w==='curl'?`of ${pl.reps} prescribed`:`active, of ${pl.min} prescribed`],
+    [steady+'%','steady tempo (consistency)'],
+    [String(lastSum.coins),'team coins sent'],
+    [String(lastSum.breathers),lastSum.breathers===1?'safety breather taken':'safety breathers taken'],
+    [Math.round(lastSum.above/60*10)/10+' min','above your zone']
+  ].map(([b,s])=>`<div class="tile"><b>${b}</b><span>${s}</span></div>`).join('');
+  $('#sumTeam').innerHTML=`${pennantSVG(m.team,48)}<span>${T.short} score</span><span class="sb-num" style="color:${T.d};text-shadow:none">${before.toFixed(1)}</span><span class="arrow">→</span><span class="sb-num" style="color:${T.d};text-shadow:none">${lastSum.afterScore.toFixed(1)}</span><span class="pmeta">vs ${TEAMS[rivalOf(m.team)].short} at ${teamScore(rivalOf(m.team)).toFixed(1)}</span>`;
+  show('summary');if(pct>=100)SFX.fanfare();else SFX.chime();
+}
+$('#againBtn').addEventListener('click',()=>pickPlayer(lastSum?lastSum.pid:chosen));
+
+/* ---------- teams sim ---------- */
+let teamAcc=0;
+function stepTeams(dtR){
+  teamAcc+=dtR;if(teamAcc<1.3)return;teamAcc=0;
+  const f=Math.min(4,Math.sqrt(speed)),mine=myTeam(),rv=rivalOf(mine);
+  Object.keys(MEMBERS).forEach(t=>{
+    if(Math.random()>.55)return;
+    const pool=MEMBERS[t].filter(m=>m.dose<100&&!(S&&S.pid===m.id)&&!(lastSum&&lastSum.pid===m.id&&!S));
+    if(!pool.length)return;const m=pool[Math.floor(Math.random()*pool.length)];
+    const before=m.dose;m.dose=Math.min(100,m.dose+rnd(.5,1.8)*f*(t===rv?.85:1));
+    const s0=Math.floor(before/33.3+.001),s1=Math.floor(m.dose/33.3+.001);
+    if(s1>s0)pushFeed(`${m.first} (${TEAMS[t].short}) finished session ${s1} of 3`,t);
+  });
+}
+
+/* ---------- match day ---------- */
+function buildMatch(){
+  const a=myTeam(),b=rivalOf(a);const fx=FIXTURES.find(f=>f.includes(a));const A=fx[0],B=fx[1];
+  $('#matchEyebrow').textContent=`Match day · Week ${week}${weekDone?' · final':''}`;
+  $('#matchH').textContent=`${TEAMS[A].short} vs ${TEAMS[B].short}`;
+  $('#arena').innerHTML=`${totemHTML(A)}<div class="mid"><span class="vs-tag">VS</span><div class="lead" id="leadTxt"></div><div class="pmeta" id="avgTxt"></div></div>${totemHTML(B)}`;
+  $('#rosters').innerHTML=[A,B].map(t=>`<div class="card roster" style="${teamStyle(t)}"><h3>${pennantSVG(t,44)} ${TEAMS[t].name}</h3>${MEMBERS[t].map(m=>`<div class="mrow" data-mid="${m.id}">${avatarSVG(m,44)}<div><div class="nm">${m.name}</div><div class="st"></div></div><button class="cheer" data-cheer="${m.id}">Cheer</button><div class="bars"><div class="bar" title="Weekly dose"><i style="width:0%"></i></div></div></div>`).join('')}</div>`).join('');
+  updateScores();renderMatch();
+}
+function renderMatch(){
+  const a=myTeam();const fx=FIXTURES.find(f=>f.includes(a));const A=fx[0],B=fx[1];
+  const sa=teamScore(A),sb=teamScore(B);const lead=Math.abs(sa-sb)<.05?'All square!':`${TEAMS[sa>sb?A:B].short} lead by ${Math.abs(sa-sb).toFixed(1)}`;
+  const lt=$('#leadTxt');if(lt)lt.textContent=lead;
+  const av=$('#avgTxt');if(av)av.innerHTML=`Average dose ${Math.round(teamDose(A))}% vs ${Math.round(teamDose(B))}%<br>Time in zone ${Math.round(teamZone(A))}% vs ${Math.round(teamZone(B))}%`;
+  $$('#rosters .mrow').forEach(r=>{const m=byId(r.dataset.mid);const d=mDose(m);const live=S&&S.pid===m.id;const rest=live&&S.alert;
+    r.classList.toggle('you',!!live||(lastSum&&lastSum.pid===m.id));r.classList.toggle('resting',!!rest);
+    r.querySelector('.bar i').style.width=d+'%';
+    r.querySelector('.st').textContent=rest?'Taking a breather':`${sessionsDone(m)} of 3 sessions · ${Math.round(d)}% dose · ${d>0?Math.round(mZone(m))+'% in zone':'not started'}${live?' · live now':''}`;
+    const cb=r.querySelector('.cheer');const hot=!!rest;if(cb.classList.contains('hot')!==hot){cb.classList.toggle('hot',hot);cb.textContent=hot?'Send encouragement':'Cheer'}});
+  const ma=$('#matchAlert');const need=S&&S.alert;
+  if(need&&!ma.innerHTML){ma.innerHTML=`<div class="alertbanner"><span>${S.member.first} is taking a breather (${S.alert.kind==='spo2'?'low blood oxygen':'high heart rate'}). Teammates can send a kind word.</span><button class="btn btn-gold btn-sm" data-cheer="${S.pid}">Send encouragement</button></div>`}
+  else if(!need&&ma.innerHTML)ma.innerHTML='';
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-cheer]');if(!b)return;const m=byId(b.dataset.cheer);
+  if(S&&S.alert&&S.pid===m.id){addCheer(byId(MEMBERS[m.team].find(x=>x.id!==m.id).id),'You\'ve got this. Rest up!');toast(`Encouragement sent to ${m.first}. It shows on their screen.`)}
+  else toast(`Cheer sent to ${m.first}!`);
+  SFX.cheer();pushFeed(`A teammate cheered for ${m.first}`,m.team)});
+function renderFeed(sel,n){const el=$(sel);if(!el)return;const items=FEED.slice(0,n);el.innerHTML=items.length?items.map(f=>`<li><span class="tag">${pennantSVG(f.team,34)}</span><span>${f.txt}</span></li>`).join(''):'<li>No news yet. Start a session to get the league moving.</li>'}
+$('#whistleBtn').addEventListener('click',()=>finalWhistle());
+
+/* ---------- final whistle + trophy ---------- */
+function finalWhistle(){
+  const mine=myTeam();
+  if(!weekDone){
+    if(S&&!S.alert)finishSessionQuiet();
+    Object.keys(MEMBERS).forEach(t=>MEMBERS[t].forEach(m=>{if(lastSum&&lastSum.pid===m.id)return;
+      const p=t===mine?.85:.6;if(Math.random()<p)m.dose=100;else m.dose=Math.min(100,Math.max(m.dose,66.7))}));
+    FIXTURES.forEach(([a,b])=>{const sa=teamScore(a),sb=teamScore(b);const r=Math.abs(sa-sb)<.5?'D':sa>sb?'a':'b';
+      [[a,r==='a'?'W':r==='D'?'D':'L'],[b,r==='b'?'W':r==='D'?'D':'L']].forEach(([t,res])=>{const T=TABLE[t];T.p++;if(res==='W')T.w++;else if(res==='D')T.d++;else T.l++;T.form.shift();T.form.push(res);
+        T.dose=Math.round((T.dose*5+teamDose(t))/6);T.zone=Math.round((T.zone*5+teamZone(t))/6)})});
+    weekDone=true;
+  }
+  showTrophy(mine);
+}
+function finishSessionQuiet(){const m=S.member;const z=mZone(m),d=mDose(m);lastSum=lastSum||{pid:S.pid,team:m.team};lastSum.pid=S.pid;lastSum.team=m.team;S=null;m.zone=z;m.dose=d}
+function showTrophy(mine){
+  const fx=FIXTURES.find(f=>f.includes(mine));const [A,B]=fx;const sa=teamScore(A),sb=teamScore(B);
+  const win=sa>=sb?A:B,lose=win===A?B:A;const W=TEAMS[win];
+  $('#trRibbon').textContent=`Final whistle · Week ${week}`;
+  $('#trophy').innerHTML=TROPHY('gcupA');
+  $('#lifters').innerHTML=MEMBERS[win].map(m=>`<div>${avatarSVG(m,64,true)}</div>`).join('');
+  $('#trTitle').textContent=`The ${W.name} lift the trophy!`;
+  $('#trA').textContent=teamScore(win).toFixed(1);$('#trB').textContent=teamScore(lose).toFixed(1);
+  const mvp=MEMBERS[win].slice().sort((x,y)=>mPts(y)-mPts(x))[0];
+  $('#trMvp').innerHTML=`<b>MVP: ${mvp.name}</b>, the most consistent player: ${sessionsDone(mvp)} of 3 sessions with ${Math.round(mZone(mvp))}% of the time in zone.`;
+  const other=FIXTURES.find(f=>f!==fx);const so=teamScore(other[0]),st=teamScore(other[1]);
+  $('#trOther').textContent=`Elsewhere: ${TEAMS[other[0]].short} ${so.toFixed(1)}, ${TEAMS[other[1]].short} ${st.toFixed(1)}. ${TEAMS[lose].short} played well and stay in the playoff race.`;
+  $('#ovTrophy').hidden=false;SFX.whistle();setTimeout(()=>SFX.fanfare(),500);
+  if(!RM)confetti([W.c,W.d,'#f4b223','#1f8ee0','#ffffff']);
+}
+let confRAF=0;
+function confetti(cols){
+  const c=$('#confetti'),dpr=window.devicePixelRatio||1,W=innerWidth,H=innerHeight;c.width=W*dpr;c.height=H*dpr;const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+  const P=Array.from({length:160},()=>({x:rnd(0,W),y:rnd(-H,-10),vx:rnd(-1,1),vy:rnd(2,5),r:rnd(0,6.3),vr:rnd(-.2,.2),w:rnd(8,14),h:rnd(4,8),c:cols[Math.floor(Math.random()*cols.length)]}));
+  const t0=performance.now();cancelAnimationFrame(confRAF);
+  (function f(now){g.clearRect(0,0,W,H);P.forEach(p=>{p.x+=p.vx+Math.sin((now+p.y)/400)*.6;p.y+=p.vy;p.r+=p.vr;g.save();g.translate(p.x,p.y);g.rotate(p.r);g.fillStyle=p.c;g.fillRect(-p.w/2,-p.h/2,p.w,p.h);g.restore()});
+    if(now-t0<6000&&!$('#ovTrophy').hidden)confRAF=requestAnimationFrame(f);else g.clearRect(0,0,W,H)})(t0);
+}
+$('#trClose').addEventListener('click',()=>{$('#ovTrophy').hidden=true});
+$('#trStand').addEventListener('click',()=>{$('#ovTrophy').hidden=true;show('standings')});
+
+/* ---------- standings ---------- */
+function sortedTeams(){return Object.keys(TABLE).sort((a,b)=>{const A=TABLE[a],B=TABLE[b];return (3*B.w+B.d)-(3*A.w+A.d)||B.dose-A.dose||B.zone-A.zone})}
+function renderStandings(){
+  const order=sortedTeams();
+  $('#table').innerHTML=`<thead><tr><th>#</th><th>Team</th><th>Played</th><th>Won</th><th>Drawn</th><th>Lost</th><th>Avg dose</th><th>In zone</th><th>Last 5</th><th>Points</th></tr></thead><tbody>${order.map((t,i)=>{const T=TABLE[t],X=TEAMS[t];return `<tr><td class="pos">${i+1}</td><td class="team"><div>${pennantSVG(t,52)}<span>${X.name}<small>${X.group} · mascot ${X.mascotName}</small></span></div></td><td>${T.p}</td><td>${T.w}</td><td>${T.d}</td><td>${T.l}</td><td>${T.dose}%</td><td>${T.zone}%</td><td><span class="form">${T.form.map(r=>`<i class="${r}">${r}</i>`).join('')}</span></td><td class="pts">${3*T.w+T.d}</td></tr>`}).join('')}</tbody>`;
+  const slot=t=>`<div class="slot" style="${teamStyle(t)}">${pennantSVG(t,34)}<span>${TEAMS[t].short}</span></div>`;
+  $('#bracket').innerHTML=`<div class="bk"><div class="lbl">Semi-final 1</div>${slot(order[0])}${slot(order[3])}<div class="lbl">Semi-final 2</div>${slot(order[1])}${slot(order[2])}</div><div aria-hidden="true" style="font:400 28px/1 var(--f-score);color:var(--ink-2)">›</div><div class="final"><div style="width:110px">${TROPHY('gcupB')}</div><div class="lbl" style="font:600 18px/1.2 var(--f-display)">Harvest Cup final</div><div class="pmeta">Winners of each semi</div></div>`;
+  const ranked=ALL.slice().sort((x,y)=>(mPts(y)+sessionsDone(y)*5)-(mPts(x)+sessionsDone(x)*5)).slice(0,5);
+  const mc=['#e0a400','#9aaabb','#c07a3d','#7fa6c4','#7fa6c4'];
+  $('#mvps').innerHTML=ranked.map((m,i)=>`<li style="${teamStyle(m.team)}"><span class="medal" style="background:${mc[i]}">${i+1}</span>${avatarSVG(m,44)}<div><div class="nm">${m.name}</div><div class="st">${TEAMS[m.team].short} · ${sessionsDone(m)} of 3 sessions · ${Math.round(mZone(m))}% in zone</div></div></li>`).join('');
+}
+
+/* ---------- tug of war ---------- */
+const TUG={on:false,x:0,t:0,dur:40,imp:0,res:null,ours:0,theirs:0,surge:0,surgeT:4,W:0,H:270,ctx:null};
+function ensureSession(){if(!S){const pid=lastSum?lastSum.pid:chosen;startSession(pid,'walk',true)}}
+function openTug(){ensureSession();if(view!=='live')show('live');TUG.on=true;TUG.x=0;TUG.t=0;TUG.imp=0;TUG.res=null;TUG.surge=0;TUG.surgeT=4;$('#tugResult').hidden=true;$('#ovTug').hidden=false;
+  const m=S.member,R=rivalOf(m.team);$('#tugH').textContent=`Tug of War: ${TEAMS[m.team].short} vs ${TEAMS[R].short}`;
+  $('#tugOursL').textContent=`${TEAMS[m.team].short} pull`;$('#tugTheirsL').textContent=`${TEAMS[R].short} pull`;
+  $('#tugOurs').style.background=TEAMS[m.team].c;$('#tugTheirs').style.background=TEAMS[R].c;
+  sizeTug();SFX.whistle();setTimeout(()=>{const b=$('#tugPull');if(b)b.focus()},50)}
+function closeTug(){TUG.on=false;$('#ovTug').hidden=true}
+function sizeTug(){const c=$('#tugCanvas'),dpr=window.devicePixelRatio||1;TUG.W=c.clientWidth||800;c.width=TUG.W*dpr;c.height=TUG.H*dpr;TUG.ctx=c.getContext('2d');TUG.ctx.setTransform(dpr,0,0,dpr,0,0)}
+function tugPull(){if(!TUG.on||TUG.res)return;if(canPull()){TUG.imp=Math.min(2.4,TUG.imp+.7);SFX.pull();lastSpace=performance.now()}else{toast(S&&S.alert?'Resting: your pulls are paused.':'Get into your heart-rate zone first so your pulls count.')}}
+function stepTug(dt){
+  if(TUG.res||!S)return;TUG.t+=dt;const t=TUG.t;
+  const you=(canPull()?tempoQuality()*1.4:0)+TUG.imp;TUG.imp=Math.max(0,TUG.imp-dt*2.2);
+  let mates=0;for(let i=0;i<4;i++)mates+=.95+.18*Math.sin(t*1.7+i*1.3);
+  TUG.surgeT-=dt;if(TUG.surgeT<=0){TUG.surge=TUG.surge>0?0:.9;TUG.surgeT=TUG.surge>0?1.6:rnd(4,8)}
+  let riv=0;for(let i=0;i<5;i++)riv+=.9+.2*Math.sin(t*1.3+i*2.1);riv+=TUG.surge;
+  TUG.ours=mates+you;TUG.theirs=riv;TUG.you=you;
+  TUG.x=clamp(TUG.x+(TUG.ours-TUG.theirs)*5.2*dt,-100,100);
+  if(TUG.x>=100)endTug('win');else if(TUG.x<=-100)endTug('lose');else if(t>=TUG.dur)endTug(TUG.x>3?'win':TUG.x<-3?'lose':'draw');
+}
+function endTug(r){
+  TUG.res=r;const m=S?S.member:byId(chosen),T=TEAMS[m.team],R=TEAMS[rivalOf(m.team)];
+  $('#tugResH').textContent=r==='win'?`${T.short} win the tug!`:r==='lose'?`${R.short} take this one`:'A tie! What a pull';
+  $('#tugResP').textContent=r==='win'?`Your steady pace in your zone made the difference. The ${T.short} earn a Spirit Ribbon for their banner. Ribbons are just for fun and don't change the match score.`:r==='lose'?'Close one. Pulls only count in your zone, so a steady pace beats a fast one. Have another go when you\'re ready.':'Nobody budged. That is some steady teamwork.';
+  $('#tugResult').hidden=false;if(r==='win'){SFX.fanfare();pushFeed(`${T.short} won a Tug of War and earned a Spirit Ribbon`,m.team)}else SFX.chime();
+}
+function bean(g,x,y,col,skin,lean,label,sit){
+  g.save();g.translate(x,y);g.rotate(lean);
+  g.fillStyle='rgba(0,0,0,.12)';g.beginPath();g.ellipse(0,40,18,5,0,0,7);g.fill();
+  g.fillStyle=col;g.beginPath();g.roundRect?g.roundRect(-15,sit?-4:-22,30,sit?40:58,15):g.rect(-15,-22,30,58);g.fill();
+  g.fillStyle=skin;g.beginPath();g.arc(0,sit?-20:-38,15,0,7);g.fill();
+  g.fillStyle='#1d2a36';g.beginPath();g.arc(-5,sit?-21:-39,2,0,7);g.arc(5,sit?-21:-39,2,0,7);g.fill();
+  g.restore();
+  if(label){g.fillStyle='#132f47';g.font='700 15px Fredoka, sans-serif';g.textAlign='center';g.fillText(label,x,y-64)}
+}
+function drawTug(){
+  const g=TUG.ctx;if(!g)return;const W=TUG.W,H=TUG.H,gy=H*.72;
+  const sky=g.createLinearGradient(0,0,0,gy);sky.addColorStop(0,'#bfe4fb');sky.addColorStop(1,'#eaf6fe');g.fillStyle=sky;g.fillRect(0,0,W,H);
+  g.fillStyle='#fff3b0';g.beginPath();g.arc(W-60,46,26,0,7);g.fill();
+  g.fillStyle='#8fd172';g.fillRect(0,gy,W,H-gy);g.fillStyle='#6cbf52';g.fillRect(0,gy,W,6);
+  const span=Math.min(W*.3,260),cx=W/2;
+  g.strokeStyle='#fff';g.lineWidth=4;g.setLineDash([10,8]);g.beginPath();g.moveTo(cx,gy-4);g.lineTo(cx,H);g.stroke();g.setLineDash([]);
+  if(!S)return;const m=S.member,T=TEAMS[m.team],R=TEAMS[rivalOf(m.team)];
+  [[cx-span,T.c,'WIN'],[cx+span,R.c,'WIN']].forEach(([x,c])=>{g.fillStyle='#8a6a44';g.fillRect(x-2,gy-60,4,64);g.fillStyle=c;g.beginPath();g.moveTo(x+2,gy-60);g.lineTo(x+30,gy-50);g.lineTo(x+2,gy-40);g.fill()});
+  const off=-TUG.x/100*span;const ry=gy-34,t=performance.now()/1000;
+  g.strokeStyle='#a4743f';g.lineWidth=7;g.beginPath();g.moveTo(10,ry+2);g.quadraticCurveTo(cx+off,ry+8,W-10,ry+2);g.stroke();
+  g.strokeStyle='#d9a866';g.lineWidth=2;g.setLineDash([6,6]);g.beginPath();g.moveTo(10,ry+1);g.quadraticCurveTo(cx+off,ry+7,W-10,ry+1);g.stroke();g.setLineDash([]);
+  g.fillStyle='#e53b3b';g.beginPath();g.moveTo(cx+off,ry+4);g.lineTo(cx+off-12,ry+34);g.lineTo(cx+off+12,ry+34);g.fill();
+  const mates=MEMBERS[m.team],riv=MEMBERS[rivalOf(m.team)];const gap=Math.min(46,(W/2-40)/5.4);
+  const oursP=TUG.ours/6,thP=TUG.theirs/6;
+  mates.forEach((x,i)=>{const isYou=x.id===m.id;const px=cx+off-60-i*gap;const sit=isYou&&S.alert;
+    bean(g,px,gy-34,isYou&&!canPull()?'#b9c6d2':T.c,x.skin,sit?0:-.3-.08*Math.sin(t*6+i)*oursP,isYou?(sit?'You (resting)':'You'):'',sit)});
+  riv.forEach((x,i)=>{const px=cx+off+60+i*gap;bean(g,px,gy-34,R.c,x.skin,.3+.08*Math.sin(t*6+i)*thP,'')});
+}
+function renderTugUI(){
+  if(!S)return;const left=Math.max(0,TUG.dur-TUG.t);$('#tugTimer').textContent='0:'+String(Math.ceil(left)).padStart(2,'0');
+  const tot=TUG.ours+TUG.theirs||1;$('#tugOurs').style.width=(TUG.ours/tot*100).toFixed(0)+'%';$('#tugTheirs').style.width=(TUG.theirs/tot*100).toFixed(0)+'%';
+  const st=$('#tugStatus'),p=S.p;
+  if(S.alert){st.className='status bad';st.textContent='Paused: taking a breather. Teammates are covering.'}
+  else if(S.paused){st.className='status warn';st.textContent='You are resting. Press Resume to pull.'}
+  else if(!inZone()){st.className='status warn';st.textContent=S.hr<p.zone[0]?`Warm up into your zone (${p.zone[0]}–${p.zone[1]}) to pull`:`Ease off into your zone (${p.zone[0]}–${p.zone[1]}) to pull`}
+  else if(tempoState()==='fast'){st.className='status warn';st.textContent='Too fast: steady pulls count more'}
+  else{st.className='status ok';st.textContent=`Your pulls count · heart rate ${Math.round(S.hr)}`}
+}
+$('#tugPull').addEventListener('click',e=>{e.preventDefault();tugPull()});
+$('#tugClose').addEventListener('click',closeTug);$('#tugBack').addEventListener('click',closeTug);
+$('#tugAgain').addEventListener('click',()=>openTug());
+
+/* ---------- keys ---------- */
+document.addEventListener('keydown',e=>{
+  if(e.code!=='Space'&&e.key!==' ')return;
+  if(TUG.on){e.preventDefault();tugPull();return}
+  if(S&&view==='live'&&!S.alert&&!S.paused){e.preventDefault();lastSpace=performance.now();if(S.w==='curl'){S.count++;SFX.pull()}else{S.count++}}
+});
+
+/* ---------- demo panel ---------- */
+const demo=$('#demo');
+function setDemo(open){demo.hidden=!open;$('#demoFab').setAttribute('aria-expanded',String(open))}
+$('#demoFab').addEventListener('click',()=>setDemo(demo.hidden));$('#demoX').addEventListener('click',()=>setDemo(false));
+function setPace(pc){pace=pc;$$('#dPace [data-pace]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.pace===pc)))}
+$$('#dSpeed [data-speed]').forEach(b=>b.addEventListener('click',()=>{speed=+b.dataset.speed;$$('#dSpeed [data-speed]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));toast(`Simulated time: ${speed}×`)}));
+$$('#dPace [data-pace]').forEach(b=>b.addEventListener('click',()=>{ensureLive();setPace(b.dataset.pace);toast({easy:'Pace: too easy (under-doing it)',steady:'Pace: steady, in the zone',push:'Pace: overdoing it'}[pace])}));
+$('#dJump').addEventListener('click',()=>{ensureLive();const steps=180/0.1;for(let i=0;i<steps;i++)stepSession(.1,.1,performance.now());toast('Skipped ahead 3 minutes')});
+function ensureLive(){if(!S){startSession(lastSum?lastSum.pid:chosen,'walk',true)}else if(view!=='live')show('live')}
+$('#dSpo2').addEventListener('click',()=>{ensureLive();S.ev.sp=performance.now()+6000;toast('Simulating a blood-oxygen dip')});
+$('#dHr').addEventListener('click',()=>{ensureLive();S.ev.hr=performance.now()+5000;toast('Simulating a heart-rate spike')});
+$$('[data-wk]').forEach(b=>b.addEventListener('click',()=>{const pid=S?S.pid:(lastSum?lastSum.pid:chosen);if(TUG.on)closeTug();$('#ovAlert').hidden=true;S=null;startSession(pid,b.dataset.wk,true)}));
+$$('[data-jump]').forEach(b=>b.addEventListener('click',()=>{const j=b.dataset.jump;
+  if(j!=='tug'&&TUG.on)closeTug();
+  if(j==='live')ensureLive();
+  else if(j==='tug')openTug();
+  else if(j==='summary'){if(!S){startSession(lastSum?lastSum.pid:chosen,'walk',true)}S.paused=false;setPace('steady');for(let i=0;i<14000;i++){stepSession(.1,.1,performance.now());if(sessPct()>=100)break}$('#ovAlert').hidden=true;if(S)S.alert=null;finishSession()}
+  else if(j==='match')show('match');
+  else if(j==='standings')show('standings');
+  else if(j==='trophy')finalWhistle();
+}));
+
+/* ---------- loop ---------- */
+let last=performance.now(),uiAcc=0;
+function frame(now){
+  const dtR=Math.min(.1,Math.max(0,(now-last)/1000));last=now;
+  try{
+    if(S)stepSession(dtR*speed,dtR,now);
+    genAccel(dtR,now);stepTeams(dtR);flushCoins(dtR);
+    if(TUG.on)stepTug(dtR);
+    uiAcc+=dtR;
+    if(uiAcc>.12){uiAcc=0;updateScores();
+      if(view==='live')renderLive();
+      if(view==='match'){renderMatch();if(feedDirty)renderFeed('#matchFeed',7)}
+      if(view==='home'&&feedDirty)renderFeed('#homeFeed',5);
+      if(S&&S.alert)renderAlert();
+      if(TUG.on)renderTugUI();
+      feedDirty=false;
+    }
+    if(view==='live'&&S)drawTrace();
+    if(TUG.on)drawTug();
+  }catch(err){console.warn(err)}
+  requestAnimationFrame(frame);
+}
+pushFeed('June W. finished session 3 of 3 for the week','tb');
+pushFeed('Agnes F. hit her full weekly dose','tt');
+pushFeed('Deepa K. walked 12 minutes from home','ml');
+pushFeed('Rosa V. finished session 2 of 3','ww');
+show('home');
+requestAnimationFrame(frame);
+})();
+</script>

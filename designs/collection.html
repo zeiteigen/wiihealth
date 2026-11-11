@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Movement Studio — 15 interactive concepts</title>
+<link rel="stylesheet" href="gallery.css">
+</head>
+<body>
+<main id="gallery">
+  <header class="masthead"><a class="brand" href="./collection.html"><span class="brand-icon" aria-hidden="true">✳</span> Movement Studio</a><span class="edition">ECE 198 · Design collection</span></header>
+  <section class="intro">
+    <div><p class="eyebrow">A little movement. A lot of possibility.</p><h1>Find your kind<br>of <span>feel-good.</span></h1><p class="lede">Fifteen playful ways to bring exercise, encouragement, and community together. Pick a world and take it for a spin.</p></div>
+    <div class="hero-art" aria-hidden="true"><div class="orbit one"></div><div class="orbit two"></div><span class="spark s1">✦</span><span class="spark s2">✦</span><div class="hero-face"><i></i><i></i><b></b></div><div class="hero-body"></div><div class="bubble b1">♥ In your zone</div><div class="bubble b2">✓ A little every day</div><div class="ground"></div></div>
+  </section>
+  <section class="collection" aria-labelledby="collection-title">
+    <div class="collection-head"><div><p class="eyebrow">Choose your next adventure</p><h2 id="collection-title">The concept collection <span id="count">15</span></h2></div><div class="filters" aria-label="Filter concepts"><button data-filter="all" aria-pressed="true">All concepts</button><button data-filter="play" aria-pressed="false">Play & explore</button><button data-filter="care" aria-pressed="false">Coach & care</button><button data-filter="together" aria-pressed="false">Together</button></div></div>
+    <div id="cards" class="cards"></div>
+  </section>
+  <aside class="guide"><span class="guide-icon" aria-hidden="true">↗</span><div><h2>Your three-minute tour</h2><p>Choose a participant and workout. Try a live session, open <strong>Demo controls</strong> to speed up time or trigger a safety event, then explore the game, summary, and community.</p></div><span class="demo-pill">Simulated data · No band needed</span></aside>
+  <footer><span>Made for movement. Designed for people.</span><span>Interactive design prototypes · CCCARE project</span></footer>
+</main>
+<section id="viewer" hidden aria-label="Concept preview">
+  <nav class="viewer-bar" aria-label="Preview navigation"><button id="back">← Collection</button><div class="viewer-title"><span id="design-number"></span><strong id="design-title"></strong></div><div class="viewer-actions"><button id="previous" aria-label="Previous concept">←</button><button id="next" aria-label="Next concept">→</button><a id="standalone" target="_blank" rel="noopener">Open full screen ↗</a></div></nav>
+  <iframe id="preview" title="Interactive design preview" allow="autoplay"></iframe>
+</section>
+<script src="gallery.js?v=rest-fix-2"></script>
+</body>
+</html>
