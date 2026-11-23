@@ -20,8 +20,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
-      - name: Test sensor simulation
-        run: node --test designs/14-tv-tenfoot/tests/sensor.test.mjs
+      - name: Test sensor simulation and band link
+        run: node --test "designs/14-tv-tenfoot/tests/*.test.mjs"
       - name: Package static site
         run: python scripts/build-pages.py
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3

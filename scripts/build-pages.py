@@ -12,7 +12,7 @@ def build():
     output.mkdir()
     for path in sorted(source.rglob("*")):
         relative = path.relative_to(source)
-        if path.suffix not in {".html", ".css", ".js"} or "tests" in relative.parts:
+        if path.suffix not in {".html", ".css", ".js"} or {"tests", "controller"} & set(relative.parts):
             continue
         target = output / relative
         target.parent.mkdir(parents=True, exist_ok=True)

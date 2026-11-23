@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D6BB3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Sunroom Controls</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root {
+  --bg: #EEF4F9; --card: #FFFFFF; --ink: #0D2640; --ink-2: #4A6276; --line: #D3E2EE;
+  --sky: #1D6BB3; --sky-soft: #E2EFFA; --ok: #1B8A4F; --ok-soft: #E3F6EA; --high: #B56A00; --warn: #BC3F37; --warn-soft: #FCEBE9;
+  --sun: #FFE9A8; --press: #F2F7FB; --shadow: 0 1px 2px rgba(13, 38, 64, .06), 0 4px 14px rgba(13, 38, 64, .06);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0B1622; --card: #13212F; --ink: #EAF2F9; --ink-2: #9DB2C5; --line: #24384B;
+    --sky: #5AA8EC; --sky-soft: #173452; --ok: #4CC58A; --ok-soft: #153B2B; --high: #F0A93B; --warn: #F07A70; --warn-soft: #3A1D1C;
+    --sun: #5A4A1A; --press: #1B2D3F; --shadow: none;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 17px/1.4 'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain;
+}
+.wrap { max-width: 520px; margin: 0 auto; padding: 0 16px calc(28px + env(safe-area-inset-bottom)); }
+
+/* top bar + live strip */
+.top {
+  position: sticky; top: 0; z-index: 5; background: var(--bg);
+  padding: calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 10px calc(16px + env(safe-area-inset-left));
+  border-bottom: 1px solid var(--line);
+}
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 520px; margin: 0 auto; }
+.bar h1 { margin: 0; font-size: 19px; }
+.conn { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--ink-2); padding: 6px 12px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); }
+.conn i { width: 9px; height: 9px; border-radius: 50%; background: #93A6B7; }
+.conn.live i { background: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 22%, transparent); }
+.conn.down i { background: var(--warn); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 520px; margin: 10px auto 0; }
+.stat { background: var(--card); border-radius: 14px; padding: 8px 10px; box-shadow: var(--shadow); min-width: 0; }
+.stat span { display: block; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+.stat b { display: block; font-size: 24px; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat small { display: block; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* sections */
+section { margin-top: 18px; }
+h2 { font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); margin: 0 4px 8px; }
+.card { background: var(--card); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); }
+.now-line { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.now-line b { font-size: 20px; }
+.now-line span { color: var(--ink-2); }
+.meter { height: 10px; border-radius: 999px; background: var(--sky-soft); margin: 12px 0 6px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--ok); border-radius: 999px; transition: width .4s; }
+.sub { color: var(--ink-2); font-size: 15px; margin: 0; }
+.banner { margin-top: 10px; padding: 10px 12px; border-radius: 12px; font-weight: 700; font-size: 15px; }
+.banner.alert { background: var(--warn-soft); color: var(--warn); }
+.banner.note { background: var(--sky-soft); color: var(--ink); font-weight: 400; }
+.band-line { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 14px; color: var(--ink-2); }
+.band-line i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #93A6B7; }
+.band-line.live i { background: var(--ok); }
+
+/* buttons */
+button {
+  font: inherit; color: var(--ink); background: var(--card); border: 1.5px solid var(--line); border-radius: 14px;
+  min-height: 52px; padding: 10px 12px; font-weight: 700; cursor: pointer; touch-action: manipulation;
+  transition: transform .08s, background .15s;
+}
+button:active { transform: scale(.97); background: var(--press); }
+button:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+button[aria-pressed="true"] { background: var(--sky); border-color: var(--sky); color: #fff; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.actions { display: grid; gap: 8px; }
+.actions button { text-align: left; min-height: 56px; font-size: 18px; background: var(--card); }
+.actions button:first-child { border-color: var(--sky); }
+.empty { color: var(--ink-2); font-size: 15px; margin: 0; }
+.warn { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.sun { background: var(--sun); border-color: transparent; }
+
+/* d-pad */
+.remote { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; }
+.dpad { display: grid; grid-template-columns: repeat(3, 68px); grid-template-rows: repeat(3, 68px); gap: 6px; }
+.dpad button { min-height: 0; padding: 0; border-radius: 16px; font-size: 22px; }
+.dpad .ok { background: var(--sky); border-color: var(--sky); color: #fff; font-size: 18px; border-radius: 50%; }
+.dpad .up { grid-area: 1 / 2; } .dpad .left { grid-area: 2 / 1; } .dpad .ok { grid-area: 2 / 2; }
+.dpad .right { grid-area: 2 / 3; } .dpad .down { grid-area: 3 / 2; }
+.side { display: grid; gap: 8px; }
+.side button { min-height: 60px; }
+@media (max-width: 360px) { .dpad { grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 58px); } }
+.foot { text-align: center; color: var(--ink-2); font-size: 13px; margin-top: 22px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <h1>Sunroom controls</h1>
+    <span class="conn" id="conn" role="status"><i></i><span id="connText">Connecting…</span></span>
+  </div>
+  <div class="stats" aria-live="off">
+    <div class="stat"><span>Heart</span><b id="hr">--</b><small id="zone">&nbsp;</small></div>
+    <div class="stat"><span>Oxygen</span><b id="o2">--</b><small id="o2note">&nbsp;</small></div>
+    <div class="stat"><span>Pace</span><b id="pace">--</b><small id="paceUnit">&nbsp;</small></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section aria-labelledby="h-now">
+    <h2 id="h-now">On the TV now</h2>
+    <div class="card">
+      <div class="now-line"><b id="screen">Connecting…</b><span id="who"></span></div>
+      <div id="doseBox" hidden>
+        <div class="meter"><i id="doseBar"></i></div>
+        <p class="sub" id="doseText"></p>
+      </div>
+      <div class="banner alert" id="alert" hidden></div>
+      <div class="banner note" id="toast" hidden></div>
+      <div class="band-line" id="bandLine"><i></i><span id="band">Wristband: not connected</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-tap">
+    <h2 id="h-tap">Tap a button on the TV</h2>
+    <div class="actions" id="actions"><p class="empty">Buttons on the TV screen appear here.</p></div>
+  </section>
+
+  <section aria-labelledby="h-remote">
+    <h2 id="h-remote">Remote</h2>
+    <div class="card remote">
+      <div class="side">
+        <button data-type="press" data-act="back">Back</button>
+      </div>
+      <div class="dpad">
+        <button class="up" data-type="press" data-act="up" aria-label="Up">▲</button>
+        <button class="left" data-type="press" data-act="left" aria-label="Left">◀</button>
+        <button class="ok" data-type="press" data-act="ok">OK</button>
+        <button class="right" data-type="press" data-act="right" aria-label="Right">▶</button>
+        <button class="down" data-type="press" data-act="down" aria-label="Down">▼</button>
+      </div>
+      <div class="side">
+        <button class="sun" data-type="press" data-act="rep">Add a rep</button>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-safety">
+    <h2 id="h-safety">Safety moments</h2>
+    <div class="grid2">
+      <button class="warn" data-type="event" data-ev="spo2">Oxygen dip</button>
+      <button class="warn" data-type="event" data-ev="hr">Heart spike</button>
+      <button class="warn" data-type="event" data-ev="overdo">Overdoing it</button>
+      <button class="warn" data-type="event" data-ev="still">No movement</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-who">
+    <h2 id="h-who">Participant</h2>
+    <div class="grid3" id="profiles">
+      <button data-type="profile" data-id="margaret">Margaret</button>
+      <button data-type="profile" data-id="desmond">Desmond</button>
+      <button data-type="profile" data-id="lin">Lin</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-workout">
+    <h2 id="h-workout">Workout</h2>
+    <div class="grid3" id="workouts">
+      <button data-type="workout" data-w="walk">Walk</button>
+      <button data-type="workout" data-w="cycle">Cycle</button>
+      <button data-type="workout" data-w="lift">Dumbbell</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-jump">
+    <h2 id="h-jump">Jump to</h2>
+    <div class="grid2">
+      <button data-type="jump" data-to="home">Participants</button>
+      <button data-type="jump" data-to="plan">Workouts</button>
+      <button data-type="jump" data-to="band">Band on</button>
+      <button data-type="jump" data-to="live">Live workout</button>
+      <button data-type="jump" data-to="game">Minigame</button>
+      <button data-type="jump" data-to="summary">Summary</button>
+      <button data-type="jump" data-to="club">Club</button>
+      <button data-type="event" data-ev="done">Fill the dose</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-time">
+    <h2 id="h-time">Time speed and sound</h2>
+    <div class="grid4" id="speeds">
+      <button data-type="speed" data-value="1">1×</button>
+      <button data-type="speed" data-value="5">5×</button>
+      <button data-type="speed" data-value="20">20×</button>
+      <button data-type="speed" data-value="60">60×</button>
+    </div>
+    <div style="margin-top:8px"><button data-type="sound" id="sound" style="width:100%">Sound: on</button></div>
+  </section>
+
+  <p class="foot">Controls the Sunroom TV page open on the laptop. Connect the wristband on the TV page itself.</p>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const ALERTS = { "alert-oxygen": "Oxygen alert is showing on the TV", "alert-heart": "Heart rate alert is showing on the TV",
+  "alert-still": "“Are you okay?” check is showing on the TV", pause: "Workout is paused", party: "Celebration is showing on the TV", goal: "Goal reached! The success screen is on the TV" };
+let lastState = 0, lastActions = "", failed = false;
+
+function send(command) {
+  if (navigator.vibrate) navigator.vibrate(10);
+  fetch("/command", { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(command) })
+    .then((r) => { failed = !r.ok; })
+    .catch(() => { failed = true; updateConn(); });
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-type]");
+  if (!b) return;
+  const c = { type: b.dataset.type };
+  for (const k of ["act", "ev", "to", "value", "w", "id", "index", "label"]) if (b.dataset[k] !== undefined) c[k] = k === "index" ? +b.dataset[k] : b.dataset[k];
+  send(c);
+});
+
+function setText(id, text) { const el = $(id); if (el.textContent !== text) el.textContent = text; }
+function press(selector, attr, value) {
+  document.querySelectorAll(selector).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset[attr] === value)));
+}
+
+function render(s) {
+  setText("hr", s.hr); setText("zone", s.zone || " ");
+  setText("o2", s.o2); setText("o2note", s.o2 === "--" ? "Checking" : " ");
+  const [value, ...unit] = String(s.pace).split(" ");
+  setText("pace", value); setText("paceUnit", unit.join(" ") || " ");
+  setText("screen", s.screen);
+  setText("who", s.name ? `${s.name} · ${{ walk: "Walk", cycle: "Cycle", lift: "Dumbbell" }[s.workout]}` : "");
+  $("doseBox").hidden = s.dose === null;
+  if (s.dose !== null) { $("doseBar").style.width = s.dose + "%"; setText("doseText", `${s.dose}% of today's dose · ${s.progress}${s.paused ? " · paused" : ""}`); }
+  const alert = ALERTS[s.overlay]; $("alert").hidden = !alert; if (alert) setText("alert", alert);
+  $("toast").hidden = !s.toast; if (s.toast) setText("toast", "TV says: " + s.toast);
+  setText("band", "Wristband: " + s.band); $("bandLine").classList.toggle("live", !!s.bandLive);
+  press("#profiles button", "id", s.profile); press("#workouts button", "w", s.workout); press("#speeds button", "value", s.speed);
+  setText("sound", s.sound ? "Sound: on" : "Sound: off");
+  const actions = JSON.stringify(s.actions);
+  if (actions !== lastActions) {
+    lastActions = actions;
+    const box = $("actions"); box.textContent = "";
+    if (!s.actions.length) { const p = document.createElement("p"); p.className = "empty"; p.textContent = "No buttons on the TV right now."; box.append(p); }
+    for (const a of s.actions) {
+      const b = document.createElement("button");
+      b.dataset.type = "tap"; b.dataset.index = a.index; b.dataset.label = a.label; b.textContent = a.label;
+      box.append(b);
+    }
+  }
+}
+
+const events = new EventSource("/events");
+events.onmessage = (e) => { try { render(JSON.parse(e.data)); lastState = Date.now(); failed = false; updateConn(); } catch (err) { /* ignore */ } };
+events.onerror = () => updateConn();
+function updateConn() {
+  const fresh = Date.now() - lastState < 6000;
+  const state = failed || events.readyState === EventSource.CLOSED ? "down" : fresh ? "live" : "wait";
+  $("conn").className = "conn " + state;
+  setText("connText", state === "live" ? "TV connected" : state === "down" ? "Laptop unreachable" : "No TV page");
+  if (!fresh) setText("screen", state === "down" ? "Can't reach the laptop. Is launch.py running?" : "No TV connected. Open or reload Sunroom TV on the laptop.");
+}
+setInterval(updateConn, 1000);
+</script>
+</body>
+</html>

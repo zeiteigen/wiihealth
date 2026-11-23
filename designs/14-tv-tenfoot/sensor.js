@@ -1,5 +1,6 @@
 export function createSensor() { return { t: 0, hr: 74, spo2: 97.3, phase: 0, effort: 1, userEff: 1, ax: 0, ay: 0, az: 1, moving: false,
-  ev: { spo2: 0, hr: 0, overdo: 0, still: false }, lastRep: -10, intervals: [], armed: true, trace: [], lastMove: 0, cad: 0, tempo: 0, coachPhase: 0, recovering: false }; }
+  ev: { spo2: 0, hr: 0, overdo: 0, still: false }, lastRep: -10, intervals: [], armed: true, trace: [], lastMove: 0, cad: 0, tempo: 0, coachPhase: 0, recovering: false,
+  hrOk: true, o2Ok: true, fast: false }; }
 
 // Simulation has a bounded timestep and repairs invalid numerical state before use.
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -16,6 +17,7 @@ export function advanceSensor(sim, dt, {workout, plan, profile, hasSession, onDe
   if (!Number.isFinite(dt) || dt <= 0) return;
   dt = Math.min(dt, .1);
   repairReadings(sim, profile.rest);
+  sim.hrOk = sim.o2Ok = true; sim.fast = false;  // simulated readings are always available
   sim.t += dt;
   const w = workout, Wk = WORKOUTS[w], d = plan;
   const still = sim.ev.still || !sim.moving;

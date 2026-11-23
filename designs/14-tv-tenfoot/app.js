@@ -1,7 +1,8 @@
 
-import {sunflowerSVG, avatarSVG, figSVG, placementSVG, drawScene, drawFig, drawFlowerHead, drawSunflower} from './graphics.js?v=main3';
-import {advanceSensor, frameDelta, createSensor} from './sensor.js?v=main3';
-import {setupPanels} from './panels.js?v=main3';
+import {sunflowerSVG, avatarSVG, figSVG, placementSVG, drawScene, drawFig, drawFlowerHead, drawSunflower} from './graphics.js?v=main9';
+import {advanceSensor, frameDelta, createSensor} from './sensor.js?v=main9';
+import {setupPanels} from './panels.js?v=main9';
+import {BandLink, createLive, ingestFrame, advanceLive, STALE_MS} from './band.js?v=main9';
 "use strict";
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -17,7 +18,7 @@ const PROFILES = [
   { id: "desmond", name: "Desmond", age: 68, program: "Stroke recovery", rest: 70,
     look: { skin: "#8D5A3B", hair: "#B8B8B8", style: "short", shirt: "#3FAE6A", pants: "#34445C", glasses: false },
     dose: { walk: { min: 15, zone: [88, 106] }, cycle: { min: 20, zone: [90, 108] }, lift: { sets: 2, reps: 8, kg: 1, zone: [82, 102] } }, rec: "cycle" },
-  { id: "lin", name: "Lin", age: 75, program: "Program graduate, on my own", rest: 68,
+  { id: "lin", name: "Lin", age: 75, program: "Sarcopenia: rebuilding muscle", rest: 68,
     look: { skin: "#EBC39B", hair: "#3A3A44", style: "bun", shirt: "#F08A5D", pants: "#3B3F66", glasses: true },
     dose: { walk: { min: 30, zone: [100, 122] }, cycle: { min: 25, zone: [100, 120] }, lift: { sets: 3, reps: 10, kg: 3, zone: [88, 112] } }, rec: "lift" }
 ];
@@ -233,19 +234,65 @@ function rnd() { return Math.random() - 0.5; }
 function simSub(dt) {
   advanceSensor(sim, dt, {workout:S.workout, plan:D(), profile:S.profile, hasSession:!!S.session, onDetect});
 }
-function onDetect(manual) {
+
+/* ---------- wristband link (firmware/sunroom_band) ---------- */
+const live = createLive();
+const band = new BandLink({ onMessage: onBandMessage, onChange: onBandChange });
+let bandInfo = null, lastModeSync = 0, wasLive = false;
+function bandLive() { return band.state === "on" && performance.now() - live.at < STALE_MS; }
+function stillLimit() { return bandLive() ? 30 : 4; }   // real people pause; the simulation never does
+function hrText() { return sim.hrOk ? String(Math.round(sim.hr)) : "--"; }
+function o2Text() { return sim.o2Ok ? Math.round(sim.spo2) + "%" : "--"; }
+function syncBand() {
+  band.send("MODE", S.workout);
+  if (S.profile) band.send("NAME", S.profile.name);
+  if (S.session && !S.session.sample && (S.view === "live" || S.view === "game")) band.send("START");
+}
+function onBandMessage(m) {
+  if (m.kind === "frame") {
+    ingestFrame(live, m, performance.now());
+    if (m.mode && m.mode !== S.workout && performance.now() - lastModeSync > 1500) { lastModeSync = performance.now(); band.send("MODE", S.workout); }
+  } else if (m.ev === "hello") {
+    bandInfo = m; syncBand(); renderBandStatus();
+    if (!m.mpu || !m.ppg) toast(`The band's ${!m.mpu ? "motion" : "pulse"} sensor isn't responding. Check its wires.`);
+  } else if (m.ev === "error") toast(`Band: ${m.msg}`);
+}
+function onBandChange(state, via, reason) {
+  if (state === "on") { Object.assign(live, createLive()); toast(via === "usb" ? "Band connected by USB cable" : "Band connected by Bluetooth"); }
+  else if (state === "off" && reason === "lost") toast("Band disconnected. Showing simulated readings.");
+  else if (state === "off" && reason === "lost-early") toast("The band dropped as soon as it connected. Unplug its USB cable, plug it back in, then connect again.");
+  renderBandStatus();
+}
+function renderBandStatus() {
+  const sup = BandLink.support(), on = band.state === "on", busy = band.state === "connecting", isLive = bandLive();
+  const via = band.via === "usb" ? "USB cable" : "Bluetooth";
+  $("#bandStatus").textContent = busy ? `Connecting by ${via}...`
+    : on ? (isLive ? `Live from ${bandInfo && bandInfo.name ? bandInfo.name : "the band"} by ${via}` : `Connected by ${via}, waiting for readings`)
+    : sup.usb || sup.bluetooth ? "Simulated readings" : "Simulated readings. Open this page in Chrome or Edge to connect a band.";
+  $$("[data-band]").forEach((b) => {
+    const kind = b.dataset.band;
+    b.hidden = kind === "off" ? !(on || busy) : on || busy;  // shown even when unsupported: clicking explains why
+  });
+  $("#connLabel").textContent = isLive ? `Band connected by ${via}` : on ? "Band connected, waiting" : "Simulated band";
+  $("#connDot").classList.toggle("sim", !isLive);
+  $("#traceSrc").textContent = isLive ? "live" : "simulated";
+}
+function onDetect(manual, fromBand) {
   const iv = sim.t - sim.lastRep; sim.lastRep = sim.t;
-  if (iv > 0 && iv < 8) { sim.intervals.push(iv); if (sim.intervals.length > 6) sim.intervals.shift(); }
-  const avg = sim.intervals.length ? sim.intervals.reduce((a, b) => a + b, 0) / sim.intervals.length : 0;
-  if (S.workout === "lift") sim.tempo = iv > 0 && iv < 8 ? iv : sim.tempo;
-  else if (avg > 0) sim.cad = Math.min(240, 60 / avg);
+  if (!fromBand) {  // the band measures its own pace
+    if (iv > 0 && iv < 8) { sim.intervals.push(iv); if (sim.intervals.length > 6) sim.intervals.shift(); }
+    const avg = sim.intervals.length ? sim.intervals.reduce((a, b) => a + b, 0) / sim.intervals.length : 0;
+    if (S.workout === "lift") sim.tempo = iv > 0 && iv < 8 ? iv : sim.tempo;
+    else if (avg > 0) sim.cad = Math.min(240, 60 / avg);
+  }
+  const lift = fromBand ? sim.tempo : iv;  // seconds this lift took
   const ses = S.session;
   if (ses && running()) {
     ses.count++;
     if (S.workout === "lift") {
       ses.reps++;
-      if (iv < 8) { ses.tempoSum += iv; ses.tempoN++; }
-      if (S.view === "game" && G && G.kind === "lantern") spawnLantern(iv < 8 ? iv : 3);
+      if (lift > 0 && lift < 8) { ses.tempoSum += lift; ses.tempoN++; }
+      if (S.view === "game" && G && G.kind === "lantern") spawnLantern(lift > 0 && lift < 8 ? lift : 3);
       if (ses.reps % D().reps === 0 && ses.reps < D().reps * D().sets) say(`That's set ${ses.reps / D().reps} done. Shake out your arm and breathe.`);
     }
   }
@@ -267,6 +314,7 @@ function startSession() {
   const p = S.profile, w = S.workout;
   say(w === "lift" ? `Hello ${p.name}. Lift with me: up for two, down for two. ${doseText(p, w)}.` :
     `Hello ${p.name}. Let's go ${WK[w].verb} together for ${p.dose[w].min} minutes. Follow my pace.`);
+  band.send("START");
 }
 function doseFrac() {
   const s = S.session; if (!s) return 0;
@@ -284,29 +332,51 @@ function tickSession(dt) {
   const s = S.session; if (!s || !running()) return;
   const d = D(), w = S.workout;
   s.elapsed += dt;
-  if (sim.hr >= d.zone[0] && sim.hr <= d.zone[1]) s.inZone += dt;
-  s.hrSum += sim.hr * dt; s.hrT += dt; s.minSpo2 = Math.min(s.minSpo2, sim.spo2);
+  if (sim.hrOk) { if (sim.hr >= d.zone[0] && sim.hr <= d.zone[1]) s.inZone += dt; s.hrSum += sim.hr * dt; s.hrT += dt; }
+  if (sim.o2Ok) s.minSpo2 = Math.min(s.minSpo2, sim.spo2);
   const val = w === "lift" ? sim.tempo : sim.cad, B = W().band;
   if (val) { s.bandT += dt; if (val >= B[0] && val <= B[1]) s.inBand += dt; }
   // safety checks
-  if (sim.spo2 < 92) return openAlert("oxygen");
-  if (sim.hr > d.zone[1] + 15) return openAlert("heart");
-  if (sim.t - sim.lastMove > 4) return openAlert("still");
-  const over = (w === "lift" ? (sim.tempo && sim.tempo < 1.7) : sim.cad > B[1] * 1.03) || sim.hr > d.zone[1];
+  if (sim.o2Ok && sim.spo2 < 92) return openAlert("oxygen");
+  if (sim.hrOk && sim.hr > d.zone[1] + 15) return openAlert("heart");
+  if (sim.t - sim.lastMove > stillLimit()) return openAlert("still");
+  const over = (w === "lift" ? (sim.tempo && sim.tempo < 1.7) : sim.cad > B[1] * 1.03) || (sim.hrOk && sim.hr > d.zone[1]) || sim.fast;
   s.overT = over ? s.overT + dt : Math.max(0, s.overT - dt * 2);
   if (!s.banner && s.overT > 5) {
     s.banner = true;
     showBanner(false, w === "lift" ? "Easy does it. Slower lifts protect your joints." : "Easy does it. Ease back to a gentle pace.");
+    band.send("MSG", "Easy does it");
     say(w === "lift" ? "Slow down a little. Count two up, two down, like me." : "You're going faster than your plan. Let's ease back together.");
   } else if (s.banner && s.overT === 0) {
-    s.banner = false; showBanner(true, "Lovely. That's your steady pace."); say("That's it. Nice and steady.");
+    s.banner = false; showBanner(true, "Lovely. That's your steady pace."); say("That's it. Nice and steady."); band.send("MSG");
     setTimeout(() => { if (!S.session || !S.session.banner) $("#banner").hidden = true; }, 3500);
   }
   if (!s.doneSaid && doseFrac() >= 1) {
     s.doneSaid = true; sfx("done"); say(`That's your full dose for today, ${S.profile.name}. Wonderful work.`);
-    toast("Dose complete. Press Finish when you're ready.");
-    if (S.view === "live") setFocus($("#finishBtn"), true);
+    openGoal();
   }
+}
+/* the success screen when today's dose is reached */
+function openGoal() {
+  const s = S.session, d = D(), w = S.workout, p = S.profile;
+  const what = w === "lift" ? `${d.sets} sets of ${d.reps} lifts with your ${d.kg} kg weight` : `${d.min} minutes of ${WK[w].verb}`;
+  const stats = w === "lift" ? [[s.reps, "lifts done"]] : [[s.count, w === "walk" ? "steps taken" : "pedal turns"]];
+  if (w === "lift" && s.tempoN) stats.push([`${(s.tempoSum / s.tempoN).toFixed(1)} s`, "per lift, nice and slow"]);
+  if (s.inZone >= 60) stats.push([`${Math.round(s.inZone / 60)} min`, "in your heart zone"]);
+  if (s.bandT >= 30) stats.push([`${Math.round((s.inBand / s.bandT) * 100)}%`, w === "lift" ? "steady, smooth lifts" : "at a steady pace"]);
+  if (s.rests) stats.push([s.rests, `rest break${s.rests > 1 ? "s" : ""}, well taken`]);
+  const colours = ["#FFC52E", "#1B8A4F", "#1D6BB3", "#E2574C", "#F08A5D", "#A879D6"];
+  const confetti = Array.from({ length: 24 }, (_, i) => `<i style="--x:${(i * 41) % 100}%;--d:${((i * 7) % 12) * 0.12}s;--c:${colours[i % colours.length]}"></i>`).join("");
+  band.send("MSG", "Dose done!");
+  openOverlay("goal", "party goal", `<div class="confetti" aria-hidden="true">${confetti}</div>
+    <div class="goal-badge">${sunflowerSVG()}</div>
+    <p class="eyebrow">Today's dose is complete</p>
+    <h1 class="h-xl">You did it, ${p.name}!</h1>
+    <p class="sub">${what}. That's exactly what Priya planned.</p>
+    <div class="goal-stats">${stats.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join("")}</div>
+    <div class="row-btns" style="justify-content:center"><button class="f btn primary" id="goalSummary">See my summary</button><button class="f btn" id="goalMore" data-back>Keep going</button></div>`, "goalSummary");
+  $("#goalSummary").onclick = () => { sfx("ok"); closeOverlay(); finish(); };
+  $("#goalMore").onclick = () => { sfx("ok"); band.send("MSG"); closeOverlay(); say("Lovely. Anything extra today is a bonus. Go gently."); };
 }
 function showBanner(good, text) {
   const b = $("#banner"); b.hidden = false; b.classList.toggle("good", good);
@@ -334,14 +404,14 @@ let uiT = 0;
 function updateLive(force) {
   const now = performance.now(); if (!force && now - uiT < 200) return; uiT = now;
   const d = D(), w = S.workout, s = S.session;
-  const hr = Math.round(sim.hr), [zl, zc] = zoneOf(sim.hr);
+  const hr = hrText(), [zl, zc] = sim.hrOk ? zoneOf(sim.hr) : ["Finding your pulse", "var(--z-low)"];
   if (S.view === "live") {
     $("#hrNum").textContent = hr; $("#zoneLabel").textContent = zl; $("#hrCard").style.setProperty("--zc", zc);
     const lo = S.profile.rest - 10, hi = d.zone[1] + 35, m = $("#zbMark");
     if (m) m.style.left = clamp(((sim.hr - lo) / (hi - lo)) * 100, 2, 98) + "%";
-    const o2 = Math.round(sim.spo2); $("#o2Num").textContent = o2 + "%";
-    const o2s = $("#o2State"); o2s.textContent = o2 >= 94 ? "Good" : o2 >= 92 ? "A little low" : "Low";
-    o2s.style.setProperty("--oc", o2 >= 94 ? "var(--z-ok)" : o2 >= 92 ? "var(--z-high)" : "var(--z-danger)");
+    const o2 = Math.round(sim.spo2); $("#o2Num").textContent = o2Text();
+    const o2s = $("#o2State"); o2s.textContent = !sim.o2Ok ? "Checking" : o2 >= 94 ? "Good" : o2 >= 92 ? "A little low" : "Low";
+    o2s.style.setProperty("--oc", !sim.o2Ok ? "var(--z-low)" : o2 >= 94 ? "var(--z-ok)" : o2 >= 92 ? "var(--z-high)" : "var(--z-danger)");
     const f = clamp(doseFrac(), 0, 1);
     $("#doseArc").style.strokeDashoffset = 314.16 * (1 - f);
     if (w === "lift") {
@@ -356,7 +426,7 @@ function updateLive(force) {
       $("#cntGoal").textContent = `Steady pace: ${W().band[0]} to ${W().band[1]}` + (s && w === "walk" ? ` · ${s.count} steps so far` : s ? ` · ${s.count} turns so far` : "");
     }
   } else if (S.view === "game") {
-    $("#gHr").textContent = hr; $("#hudHr").style.setProperty("--zc", zc); $("#gO2").textContent = Math.round(sim.spo2) + "%";
+    $("#gHr").textContent = hr; $("#hudHr").style.setProperty("--zc", zc); $("#gO2").textContent = o2Text();
     const B = W().band, val = w === "lift" ? sim.tempo : sim.cad;
     let lo, hi;
     if (w === "lift") { lo = 0.5; hi = 5.5; } else { lo = W().target * 0.55; hi = W().target * 1.45; }
@@ -365,10 +435,10 @@ function updateLive(force) {
     $("#paceMark").style.left = pc(val || lo) + "%";
     $("#paceTxt").textContent = w === "lift" ? `Your lift: ${sim.tempo ? sim.tempo.toFixed(1) + " s" : "waiting"} · sweet spot 2 to 4 s` : `Your pace: ${Math.round(sim.cad)} ${W().unit} · sweet spot ${B[0]} to ${B[1]}`;
   } else if (S.view === "band") {
-    $("#bandHR").textContent = hr; $("#bandO2").textContent = Math.round(sim.spo2) + "%";
+    $("#bandHR").textContent = hr; $("#bandO2").textContent = o2Text();
   }
   if (S.overlay && S.overlay.startsWith("alert")) {
-    const a = $("#ovHR"), b = $("#ovO2"); if (a) a.textContent = hr; if (b) b.textContent = Math.round(sim.spo2) + "%";
+    const a = $("#ovHR"), b = $("#ovO2"); if (a) a.textContent = hr; if (b) b.textContent = o2Text();
     checkRecovery();
   }
 }
@@ -387,31 +457,31 @@ function closeOverlay() {
 }
 function openPause() {
   if (!S.session) return;
-  S.session.paused = true; sim.moving = false;
+  S.session.paused = true; sim.moving = false; band.send("MSG", "Paused");
   openOverlay("pause", "soft", `<p class="eyebrow">Paused</p><h1 class="h-xl">Take your time.</h1>
     <p class="sub">Your band keeps an eye on your heart while you rest.</p>
     <div class="row-btns" style="justify-content:center"><button class="f btn primary" id="resumeBtn" data-back>Keep going</button><button class="f btn" id="pFinish">Finish for today</button></div>`, "resumeBtn");
-  $("#resumeBtn").onclick = () => { sfx("ok"); S.session.paused = false; sim.moving = true; sim.lastMove = sim.t; closeOverlay(); say("Welcome back. Let's carry on gently."); };
+  $("#resumeBtn").onclick = () => { sfx("ok"); S.session.paused = false; sim.moving = true; sim.lastMove = sim.t; closeOverlay(); say("Welcome back. Let's carry on gently."); band.send("MSG"); };
   $("#pFinish").onclick = () => { sfx("ok"); closeOverlay(); finish(); };
 }
 const ALERTS = {
-  oxygen: { title: "Let's take a rest", why: (o) => `Your oxygen reading is ${o}%. It is usually 95% or more.`, todo: "Sit down and breathe slowly with the circle.", line: "Let's stop and rest for a moment. Breathe slowly with me." },
-  heart: { title: "Your heart is working hard", why: (o, h) => `Your heart is at ${h}. Your plan says ${D().zone[0]} to ${D().zone[1]}.`, todo: "Slow right down, or sit and rest.", line: "Your heart is working harder than your plan. Let's slow right down." },
-  still: { title: "Are you okay?", why: () => "Your band hasn't felt any movement for a little while.", todo: "If you're fine, press I'm okay.", line: "Are you okay? Press I'm okay if you're fine." }
+  oxygen: { title: "Let's take a rest", why: (o) => `Your oxygen reading is ${o}%. It is usually 95% or more.`, todo: "Sit down and breathe slowly with the circle.", line: "Let's stop and rest for a moment. Breathe slowly with me.", band: "Rest: low oxygen" },
+  heart: { title: "Your heart is working hard", why: (o, h) => `Your heart is at ${h}. Your plan says ${D().zone[0]} to ${D().zone[1]}.`, todo: "Slow right down, or sit and rest.", line: "Your heart is working harder than your plan. Let's slow right down.", band: "Rest: heart high" },
+  still: { title: "Are you okay?", why: () => "Your band hasn't felt any movement for a little while.", todo: "If you're fine, press I'm okay.", line: "Are you okay? Press I'm okay if you're fine.", band: "Are you OK?" }
 };
 let stillTimer = 0;
 function openAlert(type) {
   if (S.overlay) return;
   const A = ALERTS[type], s = S.session;
   if (s) { s.rests++; s.alerts = (s.alerts || []).concat(type); }
-  sim.moving = false; sfx("calm"); say(A.line);
+  sim.moving = false; sfx("calm"); say(A.line); band.send("MSG", A.band);
   const hr = Math.round(sim.hr), o2 = Math.round(sim.spo2);
   const btns = type === "still"
     ? `<button class="f btn" id="okBtn" style="color:var(--ink)">I'm okay</button><button class="f btn sun" id="helpBtn">Get help</button>`
     : `<button class="f btn" id="restBtn" style="color:var(--ink)">I'm sitting and resting</button><button class="f btn sun" id="alCall">Call my instructor</button>`;
   openOverlay("alert-" + type, "calm", `<div class="ov-row"><div class="breath"><i></i><i></i><span id="breathTxt">Breathe in</span></div>
     <div><h1 class="h-xl">${A.title}</h1><p class="sub" style="font-size:var(--t-m)">${A.why(o2, hr)}<br>${A.todo}</p>
-    <div class="reading"><div><b id="ovHR">${hr}</b><span>heart</span></div><div><b id="ovO2">${o2}%</b><span>oxygen</span></div></div>
+    <div class="reading"><div><b id="ovHR">${hrText()}</b><span>heart</span></div><div><b id="ovO2">${o2Text()}</b><span>oxygen</span></div></div>
     <div class="row-btns" id="alBtns">${btns}</div>
     <p class="ov-note" id="alNote">${type === "still" ? "If we don't hear from you in <b id='stillCount'>30</b> seconds, we'll tell Priya." : "Priya has been sent a gentle note about this reading."}</p></div></div>`,
     type === "still" ? "okBtn" : "restBtn");
@@ -447,9 +517,9 @@ function notified() {
 }
 function checkRecovery() {
   const b = $("#contBtn"); if (!b || !b.disabled) return;
-  if (sim.spo2 >= 94 && sim.hr <= D().zone[1]) {
+  if ((!sim.o2Ok || sim.spo2 >= 94) && (!sim.hrOk || sim.hr <= D().zone[1])) {
     b.disabled = false; b.textContent = "Continue gently";
-    $("#alNote").textContent = `Your readings are back to normal: heart ${Math.round(sim.hr)}, oxygen ${Math.round(sim.spo2)}%.`;
+    $("#alNote").textContent = `Your readings are back to normal: heart ${hrText()}, oxygen ${o2Text()}.`;
     setFocus(b, true); sfx("wave");
   }
 }
@@ -460,7 +530,7 @@ function startBreath() {
 }
 function resumeAfterAlert(line) {
   sim.recovering = false; sim.moving = true; sim.lastMove = sim.t; if (S.session) { S.session.overT = 0; S.session.paused = false; }
-  closeOverlay(); say(line);
+  closeOverlay(); say(line); band.send("MSG");
 }
 
 /* ---------- call ---------- */
@@ -529,7 +599,7 @@ function startGame() {
   $("#hudNum").textContent = "0"; $("#hudGoal").textContent = kind === "ride" ? `of ${G.goal} markers` : `of ${G.goal} lights`;
   $("#gameTitle").textContent = W().game; $("#gameTitle").classList.remove("out");
   setTimeout(() => $("#gameTitle").classList.add("out"), 1800);
-  $("#gameHint").innerHTML = kind === "ride" ? "Demo: press &#9650; or &#9660; to change your pace" : "Demo: Space adds a lift · &#9650; &#9660; change your speed";
+  $("#gameHint").innerHTML = bandLive() ? "Live from your band" : kind === "ride" ? "Demo: press &#9650; or &#9660; to change your pace" : "Demo: Space adds a lift · &#9650; &#9660; change your speed";
   say(kind === "ride" ? "Sunflowers bloom when you keep your steady pace. Not too fast, not too slow." : "Each slow, smooth lift sends a light into the sky. Up for two, down for two.");
   go("game", "gameBackBtn");
 }
@@ -622,11 +692,11 @@ function renderSummary() {
   else { $("#sumTitle").textContent = w === "lift" ? `You did ${s.reps} of ${d.reps * d.sets} lifts.` : `You did ${mins} of ${d.min} minutes.`; $("#sumSub").textContent = "Every minute counts. Priya will see how today went."; }
   $("#sumEyebrow").textContent = `${S.profile.name} · ${WK[w].name}` + (s.sample ? " · example session" : "");
   const zonePct = s.elapsed ? Math.round((s.inZone / s.elapsed) * 100) : 0, steady = s.bandT ? Math.round((s.inBand / s.bandT) * 100) : 0;
-  const avgHr = s.hrT ? Math.round(s.hrSum / s.hrT) : Math.round(sim.hr);
+  const avgHr = s.hrT ? Math.round(s.hrSum / s.hrT) : hrText();
   const tiles = [
     ["Time in your heart zone", `${Math.round(s.inZone / 60)} min`, zonePct],
     ["Average heart", `${avgHr}`, null, `beats a minute · zone ${d.zone[0]} to ${d.zone[1]}`],
-    ["Lowest oxygen", `${Math.round(s.minSpo2 > 98.9 ? sim.spo2 : s.minSpo2)}%`, null, s.rests ? `${s.rests} rest break${s.rests > 1 ? "s" : ""}. Well done for listening to your body.` : "No rest alerts today"],
+    ["Lowest oxygen", s.minSpo2 > 98.9 ? o2Text() : `${Math.round(s.minSpo2)}%`, null, s.rests ? `${s.rests} rest break${s.rests > 1 ? "s" : ""}. Well done for listening to your body.` : "No rest alerts today"],
     [w === "lift" ? "Steady lifts" : "Steady pace", `${steady}%`, steady, w === "lift" ? `${s.reps} lifts · ${s.lanterns} lights` : `${s.count} ${w === "walk" ? "steps" : "pedal turns"} · ${s.flowers} markers`]
   ];
   $("#sumGrid").innerHTML = tiles.map(([l, v, m, sub]) => `<div class="card stat"><span class="lbl">${l}</span><b>${v}</b>${m !== null ? `<div class="meter"><i style="width:${m}%"></i></div><span class="lbl">${m}% of the time</span>` : `<span class="lbl">${sub}</span>`}</div>`).join("");
@@ -649,13 +719,14 @@ function renderClub() {
 
 /* ---------- actions ---------- */
 function finish() {
+  band.send("STOP");
   G = null; sim.moving = false; $("#banner").hidden = true;
   if (S.session) S.session.paused = true;
   sfx("done"); go("summary", "sumClubBtn");
 }
 function ensureProfile() { if (!S.profile) S.profile = PROFILES[0]; }
 function setWorkout(w) {
-  S.workout = w;
+  S.workout = w; band.send("MODE", w);
   $$("#wkBtns button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.wk === w));
   if (S.view === "live" || S.view === "game") { G = null; if (S.overlay) closeOverlay(); startSession(); show("live", "gameBtn"); }
   else if (RENDER[S.view]) { RENDER[S.view](); requestAnimationFrame(() => focusDefault()); }
@@ -664,7 +735,7 @@ screen.addEventListener("click", (e) => {
   unlockAudio();
   const el = e.target.closest(".f"); if (!el || !screen.contains(el)) return;
   if (el !== cur) setFocus(el, true);
-  if (el.dataset.pid) { S.profile = PROFILES.find((p) => p.id === el.dataset.pid); sfx("ok"); go("plan", "w-" + S.profile.rec); return; }
+  if (el.dataset.pid) { S.profile = PROFILES.find((p) => p.id === el.dataset.pid); band.send("NAME", S.profile.name); sfx("ok"); go("plan", "w-" + S.profile.rec); return; }
   if (el.dataset.wk && el.classList.contains("wtile")) { sfx("ok"); setWorkout(el.dataset.wk); go("band", "startBtn"); return; }
   if (el.dataset.go === "back") { back(); return; }
   if (el.dataset.go === "club") { sfx("ok"); go("club"); return; }
@@ -693,6 +764,7 @@ function press(act) {
   unlockAudio(); flashRemote(act);
   if (act === "rep") { manualRep(); return; }
   if (S.view === "game" && !S.overlay && (act === "up" || act === "down")) {
+    if (bandLive()) { toast("Your band sets the pace now"); return; }
     sim.userEff = clamp(sim.userEff + (act === "up" ? 0.08 : -0.08), 0.55, 1.5);
     toast(act === "up" ? (S.workout === "lift" ? "Lifting a little faster" : "Going a little faster") : (S.workout === "lift" ? "Lifting a little slower" : "Going a little slower")); return;
   }
@@ -722,7 +794,7 @@ $$("[data-ev]").forEach((b) => b.addEventListener("click", () => {
   if (ev === "spo2") { sim.ev.spo2 = 14; toast("Simulating an oxygen dip"); }
   if (ev === "hr") { sim.ev.hr = 18; toast("Simulating a heart-rate spike"); }
   if (ev === "overdo") { sim.ev.overdo = 22; toast("Simulating overdoing it"); }
-  if (ev === "still") { sim.ev.still = true; sim.lastMove = sim.t - 3.2; toast("Simulating no movement"); }
+  if (ev === "still") { sim.ev.still = true; sim.lastMove = sim.t - (stillLimit() - 0.8); toast("Simulating no movement"); }
   if (ev === "done") { const s = S.session, d = D(); if (S.workout === "lift") { s.reps = d.reps * d.sets; s.count = s.reps; } else { s.inZone += Math.max(0, d.min * 60 - s.elapsed) * 0.85; s.elapsed = d.min * 60; s.count = Math.round(s.elapsed / 60 * 112); } }
 }));
 $$("[data-jump]").forEach((b) => b.addEventListener("click", () => {
@@ -734,15 +806,103 @@ $$("[data-jump]").forEach((b) => b.addEventListener("click", () => {
   else if (j === "summary") { if (!S.session) sampleSession(); show("summary", "sumClubBtn"); }
   else { if (j !== "club") { S.session = null; sim.moving = false; } show(j); }
 }));
+const BLUETOOTH_OFF_IN_BROWSER = "Bluetooth for web pages is switched off in this browser. Open chrome://flags/#enable-web-bluetooth (in Vivaldi: vivaldi://flags/#enable-web-bluetooth), set it to Enabled, and restart the browser. USB works without it.";
+$$("[data-band]").forEach((b) => b.addEventListener("click", async () => {
+  unlockAudio(); const kind = b.dataset.band;
+  if (kind === "off") { await band.disconnect(); toast("Band disconnected. Showing simulated readings."); return; }
+  if (!BandLink.support()[kind]) {
+    $("#bandStatus").textContent = kind === "bluetooth" ? BLUETOOTH_OFF_IN_BROWSER : "This browser can't use USB devices. Open the page in Chrome, Edge or Vivaldi.";
+    toast(kind === "bluetooth" ? "Bluetooth needs one browser setting. The steps are in Demo controls." : "Open this page in Chrome, Edge or Vivaldi to use USB.");
+    return;
+  }
+  if (kind === "bluetooth" && navigator.bluetooth.getAvailability && !(await navigator.bluetooth.getAvailability().catch(() => true))) {
+    $("#bandStatus").textContent = "Bluetooth is switched off on this computer. Turn it on, then try again.";
+    toast("Turn on this computer's Bluetooth first");
+    return;
+  }
+  try { await band.connect(kind); }
+  catch (e) { toast(e && e.name === "NotFoundError" ? "No band chosen" : `Couldn't connect to the band: ${e && e.message ? e.message : e}`); }
+}));
 $("#soundBtn").addEventListener("click", () => { S.sound = !S.sound; unlockAudio(); $("#soundBtn").textContent = S.sound ? "Sound on" : "Sound off"; $("#soundBtn").setAttribute("aria-pressed", S.sound); if (S.sound) sfx("ok"); });
 addEventListener("pointerdown", unlockAudio, { once: true });
+
+/* ---------- phone controller (designs/controller, served by launch.py) ---------- */
+// The controller sends commands through launch.py; each one presses the same
+// button a presenter would, so it behaves exactly like the on-screen controls.
+const REMOTE_OK = {
+  press: ["up", "down", "left", "right", "ok", "back", "rep"],
+  event: ["spo2", "hr", "overdo", "still", "done"],
+  jump: ["home", "plan", "band", "live", "game", "summary", "club"],
+  speed: ["1", "5", "20", "60"],
+  workout: ["walk", "cycle", "lift"],
+  profile: PROFILES.map((p) => p.id)
+};
+function labelOf(el) {
+  const name = el.querySelector(".t-name, .m-name");
+  return (el.getAttribute("aria-label") || (name ? name.textContent : el.textContent)).replace(/\s+/g, " ").trim().slice(0, 48);
+}
+function clickFirst(selector) { const el = $(selector); if (el) el.click(); }
+function remoteCommand(c) {
+  const ok = (kind, value) => REMOTE_OK[kind].includes(String(value));
+  if (c.type === "press" && ok("press", c.act)) press(c.act);
+  else if (c.type === "event" && ok("event", c.ev)) clickFirst(`[data-ev="${c.ev}"]`);
+  else if (c.type === "jump" && ok("jump", c.to)) clickFirst(`[data-jump="${c.to}"]`);
+  else if (c.type === "speed" && ok("speed", c.value)) clickFirst(`[data-speed="${c.value}"]`);
+  else if (c.type === "workout" && ok("workout", c.w)) clickFirst(`#wkBtns [data-wk="${c.w}"]`);
+  else if (c.type === "sound") clickFirst("#soundBtn");
+  else if (c.type === "profile" && ok("profile", c.id)) {
+    if (S.view !== "home") clickFirst('[data-jump="home"]');
+    requestAnimationFrame(() => clickFirst(`[data-pid="${c.id}"]`));
+  } else if (c.type === "tap") {  // a button that is on the TV right now
+    const list = items(), at = list[c.index];
+    const el = at && labelOf(at) === c.label ? at : list.find((x) => labelOf(x) === c.label);
+    if (el) el.click();
+  }
+}
+const VIEW_NAMES = { home: "Choosing a participant", plan: "Choosing a workout", band: "Putting the band on", live: "Workout in progress",
+  game: "Minigame", summary: "Today's summary", club: "Club this week", call: "Video call" };
+function remoteState() {
+  const s = S.session, d = D(), w = S.workout, t = $("#toast");
+  return {
+    view: S.view, screen: VIEW_NAMES[S.view] || S.view, overlay: S.overlay || "",
+    profile: S.profile ? S.profile.id : "", name: S.profile ? S.profile.name : "", workout: w,
+    speed: String(S.speed), sound: S.sound,
+    hr: hrText(), o2: o2Text(), zone: sim.hrOk ? zoneOf(sim.hr)[0] : "Finding the pulse",
+    pace: w === "lift" ? (sim.tempo ? `${sim.tempo.toFixed(1)} s per lift` : "No lifts yet") : `${Math.round(sim.cad)} ${W().unit}`,
+    dose: s ? Math.round(clamp(doseFrac(), 0, 1) * 100) : null,
+    progress: s ? (w === "lift" ? `${s.reps} of ${d.reps * d.sets} lifts` : `${fmtTime(s.elapsed)} of ${d.min} minutes`) : "",
+    paused: !!(s && s.paused), band: $("#bandStatus").textContent, bandLive: bandLive(),
+    toast: t.classList.contains("show") ? t.textContent : "",
+    actions: items().slice(0, 12).map((el, index) => ({ index, label: labelOf(el) })).filter((x) => x.label)
+  };
+}
+if (location.protocol === "http:") {  // served locally by launch.py; GitHub Pages has no controller
+  const events = new EventSource("/remote/events");
+  let open = false, lastSent = "", lastAt = 0;
+  events.onopen = () => { open = true; lastSent = ""; };
+  events.onmessage = (e) => { try { remoteCommand(JSON.parse(e.data)); } catch (err) { /* ignore malformed */ } };
+  events.onerror = () => { open = false; if (events.readyState === EventSource.CLOSED) events.close(); };
+  setInterval(() => {
+    if (!open) return;
+    const state = JSON.stringify(remoteState());
+    if (state === lastSent && performance.now() - lastAt < 4000) return;  // unchanged: a heartbeat every 4 s
+    lastSent = state; lastAt = performance.now();
+    fetch("/remote/state", { method: "POST", headers: { "Content-Type": "text/plain" }, body: state }).catch(() => {});
+  }, 400);
+}
 
 /* ---------- main loop ---------- */
 let last = performance.now();
 function frame(now) {
   const rdt = frameDelta(now, last); if (Number.isFinite(now)) last = now; const t = now / 1000;
   const sdt = rdt * (Number.isFinite(S.speed) && S.speed > 0 ? S.speed : 1), n = clamp(Math.ceil(sdt / 0.04), 1, 60);
-  for (let i = 0; i < n; i++) simSub(sdt / n);
+  const isLive = bandLive();
+  if (isLive !== wasLive) {
+    wasLive = isLive; renderBandStatus();
+    if (!isLive && band.state === "on") toast("No readings from the band. Showing simulated readings.");
+  }
+  if (isLive) { const reps = advanceLive(sim, live, rdt, {workout: S.workout, plan: D(), profile: S.profile}); for (let i = 0; i < reps; i++) onDetect(false, true); }
+  else for (let i = 0; i < n; i++) simSub(sdt / n);
   const coachFreq = S.workout === "lift" ? 1 / W().target : W().target / 60;
   sim.coachPhase += 2 * Math.PI * coachFreq * rdt;
   tickSession(sdt);
@@ -763,5 +923,7 @@ function frame(now) {
 }
 
 /* boot */
+renderBandStatus();
+setInterval(() => band.send("PING"), 2000);  // lets the band show that the TV is listening
 show("home");
 requestAnimationFrame(frame);

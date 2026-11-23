@@ -118,6 +118,7 @@ button{font:inherit;color:inherit}
 .steps li::marker{font-family:var(--f-display);font-weight:600;color:var(--sky-ink)}
 .conn{display:flex;flex-wrap:wrap;align-items:center;gap:.3em .8em;font-size:var(--t-s);background:#fff;border-radius:999px;padding:.4em 1em;align-self:flex-start;box-shadow:0 .3cqw .8cqw var(--shadow);font-variant-numeric:tabular-nums}
 .conn .dot{width:.8em;height:.8em;border-radius:50%;background:var(--z-ok);box-shadow:0 0 0 .25em rgba(27,138,79,.2);animation:blink 1.6s infinite}
+.conn .dot.sim{background:#8DA2B5;box-shadow:0 0 0 .25em rgba(141,162,181,.25);animation:none}
 .conn canvas{width:clamp(80px,9cqw,170px);height:1.6em;display:block}
 @keyframes blink{50%{opacity:.35}}
 .band-pulse{transform-box:fill-box;transform-origin:center;animation:bandPulse 1.6s ease-out infinite}
@@ -264,6 +265,17 @@ button{font:inherit;color:inherit}
 .reading span{font-size:var(--t-s);color:#D8E8F6;font-weight:700}
 .ov-note{font-size:var(--t-s);margin:0;opacity:.92}
 .big-flower{width:clamp(100px,18cqw,340px);animation:spin 18s linear infinite}
+.overlay.goal{overflow:hidden}
+.goal-badge{width:clamp(96px,11cqw,190px);aspect-ratio:1;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 0 0 clamp(6px,.8cqw,14px) rgba(255,255,255,.5),0 1cqw 3cqw rgba(140,90,0,.25);animation:goalPop .7s cubic-bezier(.3,1.5,.5,1) both}
+.goal-badge svg{width:80%}
+@keyframes goalPop{from{transform:scale(.3);opacity:0}}
+.goal-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--gap);position:relative}
+.goal-stats div{background:rgba(255,255,255,.78);border-radius:var(--r);padding:.5em 1.1em;display:flex;flex-direction:column;min-width:8.5em}
+.goal-stats b{font-family:var(--f-display);font-size:var(--t-l);line-height:1.1;font-variant-numeric:tabular-nums}
+.goal-stats span{font-size:var(--t-s);font-weight:700;color:var(--ink-2)}
+.confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.confetti i{position:absolute;top:-5%;left:var(--x);width:clamp(8px,.9cqw,16px);height:clamp(12px,1.4cqw,24px);background:var(--c);border-radius:3px;opacity:0;animation:fall 3.4s var(--d) ease-in forwards}
+@keyframes fall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(110vh) rotate(540deg)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .toast{position:absolute;z-index:45;left:50%;top:calc(var(--pad)*.8);transform:translate(-50%,-160%);background:var(--ink);color:#fff;border-radius:999px;padding:.4em 1.1em;font-weight:700;font-size:var(--t-b);transition:transform .4s cubic-bezier(.3,1.4,.5,1);white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
@@ -293,6 +305,7 @@ button{font:inherit;color:inherit}
 .dbtns button{border:2px solid var(--line);background:var(--pearl-2);border-radius:10px;padding:7px 10px;font-size:15px;font-weight:700;cursor:pointer;color:var(--ink)}
 .dbtns button:hover{background:#fff;border-color:var(--sky)}
 .dbtns button[aria-pressed="true"]{background:var(--sky-deep);border-color:var(--sky-deep);color:#fff}
+.band-status{margin:0;font-size:15px;line-height:1.4;color:var(--ink-2)}
 .dbtns button.warn{background:#FFF1EF;border-color:#F0C3BE;color:#8A2A23}
 
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}

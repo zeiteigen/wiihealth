@@ -8,7 +8,7 @@ Launch from the project root:
 python designs/launch.py
 ```
 
-This opens <http://localhost:4173/> in your default browser. Use `--port 4174` if that port is occupied, or `--no-browser` to serve without opening a tab. Stop with Ctrl+C. The server is bound to your computer only.
+This opens <http://localhost:4173/> in your default browser and starts the Sunroom controller at <http://localhost:4174/> (`designs/controller/`), which is also reachable from a phone over Tailscale when Tailscale is running. The controller is local only; it is not part of the GitHub Pages build. Use `--port 4174` if that port is occupied, or `--no-browser` to serve without opening a tab. Stop with Ctrl+C. The server is bound to your computer only.
 
 Serve the folder with the launcher: Sunroom uses ES modules and needs HTTP. Use **All concepts** in the floating toolbar to open the gallery. **Remote** and **Demo controls** toggle overlays; Escape closes them. Screens scroll when content exceeds the available height.
 
@@ -18,4 +18,6 @@ The concepts use Google Fonts. Breezy Isle and Toybox Gym also load pinned Three
 
 Validation: inline JavaScript syntax checked for all 15 concepts; gallery JavaScript syntax checked; local page references checked. Browser checks cover opening screens, workout switching, summary/community navigation, and deliberately triggered oxygen alerts. Inactive screens and dialogs explicitly respect the HTML `hidden` attribute so layout styles cannot leave rest overlays blocking the controls.
 
-Sunroom sensor regression tests: `node --test designs/14-tv-tenfoot/tests/sensor.test.mjs`. Browser checks cover all three workouts and games, numerical readings, safety recovery, overlay controls, and summary scrolling at desktop, phone, and short-window sizes.
+Sunroom can also run on a real ESP32 wristband: **Demo controls > Wristband > Connect by USB** or **by Bluetooth** (Chrome or Edge). See `firmware/README.md`.
+
+Sunroom sensor and band-link tests: `node --test "designs/14-tv-tenfoot/tests/*.test.mjs"`. Browser checks cover all three workouts and games, numerical readings, safety recovery, overlay controls, and summary scrolling at desktop, phone, and short-window sizes.
